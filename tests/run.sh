@@ -49,7 +49,7 @@ for i in $(seq 1 100); do
 done
 line=$(cat "$run_dir/addrs")
 field() { printf '%s\n' "$line" | tr ' ' '\n' | sed -n "s/^$1=//p"; }
-for t in cluster producer consumer; do
+for t in cluster producer consumer txn; do
     actual=$(build "$t" && cd "$run_dir" && KAFKA_PLAIN=$(field plain) KAFKA_SASL=$(field sasl) \
         KAFKA_TLS=$(field tls) KAFKA_CA=$(field ca) KAFKA_CTL=$(field ctl) "./$t" 2>&1) || true
     expected=$(cat "$repo/tests/$t/expected.txt")
