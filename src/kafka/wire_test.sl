@@ -170,3 +170,9 @@ fn test_empty_batch_refused() {
     let er = encode_batch(crc_tables(), batch_spec(), recs, 0, 0);
     assert(err_of(er) == "kafka: a batch needs at least one record");
 }
+
+fn test_itoa() {
+    for n in [0, 7, -7, 10, 123456789, -9223372036854775807 - 1, 9223372036854775807] {
+        assert(itoa(n) == to_str(n), to_str(n));
+    }
+}

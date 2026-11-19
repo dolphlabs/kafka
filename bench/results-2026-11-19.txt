@@ -1,0 +1,28 @@
+codec=0 slang produce records=1000000 ms=3645 rec/s=274283 MB/s=27 cpu_s=5.4 rss_mb=224
+codec=0 slang consume records=1000000 ms=1877 rec/s=532559 MB/s=53 cpu_s=1.49 rss_mb=187
+codec=0 go produce records=1000000 ms=1001 rec/s=998430 MB/s=99 cpu_s=1.15 rss_mb=45
+codec=0 go consume records=1000000 ms=491 rec/s=2033370 MB/s=203 cpu_s=0.4 rss_mb=40
+codec=0 go produce records=1000000 ms=1082 rec/s=923625 MB/s=92 cpu_s=1.18 rss_mb=43
+codec=0 go consume records=1000000 ms=532 rec/s=1876562 MB/s=187 cpu_s=0.38 rss_mb=39
+codec=0 slang produce records=1000000 ms=3046 rec/s=328232 MB/s=32 cpu_s=4.71 rss_mb=181
+codec=0 slang consume records=1000000 ms=1691 rec/s=591129 MB/s=59 cpu_s=1.47 rss_mb=163
+codec=3 slang produce records=1000000 ms=3218 rec/s=310734 MB/s=31 cpu_s=5.38 rss_mb=212
+codec=3 slang consume records=1000000 ms=2285 rec/s=437522 MB/s=43 cpu_s=2.41 rss_mb=194
+codec=3 go produce records=1000000 ms=506 rec/s=1976095 MB/s=197 cpu_s=0.89 rss_mb=70
+codec=3 go consume records=1000000 ms=404 rec/s=2473458 MB/s=247 cpu_s=0.6 rss_mb=301
+codec=3 go produce records=1000000 ms=412 rec/s=2426812 MB/s=242 cpu_s=0.76 rss_mb=66
+codec=3 go consume records=1000000 ms=504 rec/s=1983806 MB/s=198 cpu_s=0.64 rss_mb=298
+codec=3 slang produce records=1000000 ms=3037 rec/s=329261 MB/s=32 cpu_s=5.18 rss_mb=184
+codec=3 slang consume records=1000000 ms=2248 rec/s=444789 MB/s=44 cpu_s=2.34 rss_mb=198
+codec=4 slang produce records=1000000 ms=3838 rec/s=260527 MB/s=26 cpu_s=6.62 rss_mb=251
+codec=4 slang consume records=1000000 ms=2711 rec/s=368759 MB/s=36 cpu_s=2.78 rss_mb=328
+codec=4 go produce records=1000000 ms=428 rec/s=2334293 MB/s=233 cpu_s=0.86 rss_mb=60
+codec=4 go consume records=1000000 ms=317 rec/s=3152904 MB/s=315 cpu_s=0.56 rss_mb=295
+codec=4 go produce records=1000000 ms=450 rec/s=2217904 MB/s=221 cpu_s=0.91 rss_mb=59
+codec=4 go consume records=1000000 ms=317 rec/s=3148278 MB/s=314 cpu_s=0.46 rss_mb=292
+codec=4 slang produce records=1000000 ms=4219 rec/s=237018 MB/s=23 cpu_s=6.82 rss_mb=263
+codec=4 slang consume records=1000000 ms=2792 rec/s=358095 MB/s=35 cpu_s=2.94 rss_mb=382
+slang latency records=2000 p50_us=1598 p99_us=2501 cpu_s=2.14 rss_mb=5
+go latency records=2000 p50_us=1653 p99_us=3232 cpu_s=1.36 rss_mb=13
+go latency records=2000 p50_us=1105 p99_us=2345 cpu_s=1.08 rss_mb=14
+slang latency records=2000 p50_us=1139 p99_us=1925 cpu_s=1.9 rss_mb=5

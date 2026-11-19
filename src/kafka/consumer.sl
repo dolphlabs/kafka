@@ -24,6 +24,9 @@ import "strings";
 
 pub enum Reset { Earliest, Latest, None }
 
+// Frames grow_stack recurses through before a fetch decodes.
+let STACK_RESERVE_FRAMES = 256;
+
 pub gc struct ConsumerOptions {
     // "" for a consumer without a group (assign only, no commits)
     group: str,
@@ -105,6 +108,10 @@ pub gc struct Consumer {
     next_id: int,
     // this consumer's connections: "fetch#<uid>", "group:<id>#<uid>"
     uid: int,
+    // brokers with a fetch in flight: one at a time per broker, so a
+    // long-polling fetch never holds up one with data behind it on the
+    // same connection
+    fetching_nodes: map[int]bool,
     // the group (group.sl)
     member_id: str,
     generation: int,
@@ -126,7 +133,7 @@ fn new_consumer(cl: Client, o: ConsumerOptions) -> result[Consumer, str] {
     }
     return ok(Consumer { cl: cl, opts: o, lock: make_mutex(), subscribed: [], parts: {}, order: [], buffered: 0,
                          ready: make_chan(1), wake: make_chan(1), fatal: "", pending_err: "", closing: false,
-                         closed: false, rr: 0, next_id: 0, uid: next_consumer_uid(cl), member_id: "", generation: -1, leader_id: "", protocol: "",
+                         closed: false, rr: 0, next_id: 0, uid: next_consumer_uid(cl), fetching_nodes: {}, member_id: "", generation: -1, leader_id: "", protocol: "",
                          rejoin: false, assigned_counts: {}, last_commit_ns: now_ns(), group_done: make_chan(1),
                          fetch_done: make_chan(1) });
 }
@@ -164,7 +171,7 @@ fn next_consumer_uid(cl: Client) -> int {
 }
 
 fn part_key(topic: str, partition: int) -> str {
-    return topic + "/" + to_str(partition);
+    return topic + "/" + itoa(partition);
 }
 
 // Replaces the assignment (an eager rebalance: everything is new).
@@ -382,6 +389,10 @@ fn fetch_loop(c: Consumer) {
     kick(c.fetch_done);
 }
 
+// A broker's partitions are fetched together, once everything the last
+// fetch from it returned has been polled: a fetch that holds a partition
+// with data comes back at once, so one caught-up partition never makes
+// the others wait out fetch_max_wait_ms.
 fn plan_fetches(c: Consumer) -> map[int]FetchPlan {
     let plans: map[int]FetchPlan = {};
     mutex_lock(c.lock);
@@ -389,13 +400,23 @@ fn plan_fetches(c: Consumer) -> map[int]FetchPlan {
         mutex_unlock(c.lock);
         return plans;
     }
+    let busy: map[int]bool = {};
+    let leaders: map[str]int = {};
     for ps in c.order {
-        if ps.paused || ps.fetching || ps.position < 0 || ps.qhead < len(ps.queue) {
-            continue;
-        }
         let leader = leader_of(c.cl, ps.topic, ps.partition);
+        leaders[part_key(ps.topic, ps.partition)] = leader;
         if leader < 0 {
             metadata_stale(c.cl);
+            continue;
+        }
+        if has(c.fetching_nodes, leader) || (ps.qhead < len(ps.queue) && !ps.paused) {
+            busy[leader] = true;
+        }
+    }
+    for ps in c.order {
+        let leader = leaders[part_key(ps.topic, ps.partition)];
+        if leader < 0 || has(busy, leader) || ps.paused || ps.fetching || ps.position < 0 ||
+           ps.qhead < len(ps.queue) {
             continue;
         }
         if !has(plans, leader) {
@@ -406,11 +427,31 @@ fn plan_fetches(c: Consumer) -> map[int]FetchPlan {
         push(plans[leader].seqs, ps.seq);
         push(plans[leader].offsets, ps.position);
     }
+    for node, _p in plans {
+        c.fetching_nodes[node] = true;
+    }
     mutex_unlock(c.lock);
     return plans;
 }
 
+// Grows the calling task's stack by roughly depth frames, through calls
+// the compiler cannot fold into a loop. A task's stack grows only at slang
+// calls and promises about 2 KB below them, but macOS's malloc takes a
+// path with a frame over 4 KB for large blocks, and decompressing a fetch
+// allocates megabytes deep in this task: without headroom made here, that
+// malloc runs off the stack (a slang runtime limit; see bench/README.md).
+fn grow_stack(depth: int, acc: [int]) -> int {
+    if depth <= 0 {
+        return len(acc);
+    }
+    let below = grow_stack(depth - 1, acc);
+    push(acc, below);
+    return below + 1;
+}
+
 fn fetch_one(c: Consumer, plan: FetchPlan) {
+    let scratch: [int] = [];
+    grow_stack(STACK_RESERVE_FRAMES, scratch);
     let topics: [FetchTopic] = [];
     let at: map[str]int = {};
     for i in 0..len(plan.parts) {
@@ -452,6 +493,7 @@ fn fetch_one(c: Consumer, plan: FetchPlan) {
     for ps in plan.parts {
         ps.fetching = false;
     }
+    del(c.fetching_nodes, plan.node);
     mutex_unlock(c.lock);
     if got {
         kick(c.ready);

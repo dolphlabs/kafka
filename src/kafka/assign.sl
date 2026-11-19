@@ -283,7 +283,7 @@ fn assign_sticky(subs: [Subscription], counts: map[str]int) -> map[str][TopicPar
     let taken: map[str]bool = {};
     for m in members {
         for o in m.owned {
-            let key = o.topic + "/" + to_str(o.partition);
+            let key = o.topic + "/" + itoa(o.partition);
             if has(taken, key) || !has(counts, o.topic) || o.partition >= counts[o.topic] || !subscribes(m, o.topic) {
                 continue;
             }
@@ -295,7 +295,7 @@ fn assign_sticky(subs: [Subscription], counts: map[str]int) -> map[str][TopicPar
         }
     }
     for x in all {
-        let key = x.topic + "/" + to_str(x.partition);
+        let key = x.topic + "/" + itoa(x.partition);
         if has(taken, key) {
             continue;
         }

@@ -610,3 +610,31 @@ pub fn rd_tag_list(r: Reader) -> [Tag] {
     }
     return out;
 }
+
+// n in decimal, in slang. to_str(int) formats with the C library's
+// snprintf, whose frame on macOS is larger than the stack margin a task
+// is guaranteed before it grows, so a deep task calling it (the fetch
+// path builds a key per partition) can run off its stack. This stays in
+// slang code, where the stack grows as needed.
+pub fn itoa(n: int) -> str {
+    if n == 0 {
+        return "0";
+    }
+    let b = strings.bytes_zero(20);
+    let i = 20;
+    let neg = n < 0;
+    let u = n as u64;
+    if neg {
+        u = (0 as u64) - u;
+    }
+    while u > 0 {
+        i -= 1;
+        b[i] = 48 + ((u % 10) as int);
+        u = u / 10;
+    }
+    if neg {
+        i -= 1;
+        b[i] = 45;
+    }
+    return strings.from_bytes(b, i, 20);
+}
