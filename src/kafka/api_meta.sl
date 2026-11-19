@@ -116,48 +116,59 @@ pub gc struct MetadataResp {
 
 // topics none: every topic.
 pub fn enc_metadata(w: Buf, topics: opt[[str]], auto_create: bool) {
+    enc_metadata_v(w, 9, topics, auto_create);
+}
+
+// v8 (classic) or v9 (flexible).
+pub fn enc_metadata_v(w: Buf, v: int, topics: opt[[str]], auto_create: bool) {
+    let flex = v >= 9;
     if let ts = topics {
-        wr_clen(w, len(ts));
+        wr_n(w, flex, len(ts));
         for t in ts {
-            wr_cstr(w, t);
-            wr_tags(w);
+            wr_s(w, flex, t);
+            wr_t(w, flex);
         }
     } else {
-        wr_uvarint(w, 0);
+        wr_null_arr(w, flex);
     }
     wr_bool(w, auto_create);
     wr_bool(w, false);
     wr_bool(w, false);
-    wr_tags(w);
+    wr_t(w, flex);
 }
 
 pub fn dec_metadata(r: Reader) -> result[MetadataResp, str] {
+    return dec_metadata_v(r, 9);
+}
+
+pub fn dec_metadata_v(r: Reader, v: int) -> result[MetadataResp, str] {
+    let flex = v >= 9;
     let out = MetadataResp { throttle_ms: rd_i32(r), brokers: [], cluster_id: none, controller: -1, topics: [] };
-    let nb = rd_clen(r);
+    let nb = rd_n(r, flex);
     for k in 0..nb {
-        let b = Broker { node_id: rd_i32(r), host: rd_cstr(r), port: rd_i32(r), rack: rd_cnstr(r) };
-        rd_tags(r);
+        let b = Broker { node_id: rd_i32(r), host: rd_s(r, flex), port: rd_i32(r), rack: rd_ns(r, flex) };
+        rd_t(r, flex);
         push(out.brokers, b);
     }
-    out.cluster_id = rd_cnstr(r);
+    out.cluster_id = rd_ns(r, flex);
     out.controller = rd_i32(r);
-    let nt = rd_clen(r);
+    let nt = rd_n(r, flex);
     for k in 0..nt {
-        let t = TopicMeta { error_code: rd_i16(r), name: rd_cstr(r), internal: rd_bool(r), partitions: [] };
-        let np = rd_clen(r);
+        let t = TopicMeta { error_code: rd_i16(r), name: rd_s(r, flex), internal: rd_bool(r), partitions: [] };
+        let np = rd_n(r, flex);
         for j in 0..np {
             let p = PartitionMeta { error_code: rd_i16(r), partition: rd_i32(r), leader: rd_i32(r),
-                                    leader_epoch: rd_i32(r), replicas: rd_int32s(r), isr: rd_int32s(r),
-                                    offline: rd_int32s(r) };
-            rd_tags(r);
+                                    leader_epoch: rd_i32(r), replicas: rd_i32s(r, flex), isr: rd_i32s(r, flex),
+                                    offline: rd_i32s(r, flex) };
+            rd_t(r, flex);
             push(t.partitions, p);
         }
         rd_i32(r);
-        rd_tags(r);
+        rd_t(r, flex);
         push(out.topics, t);
     }
     rd_i32(r);
-    rd_tags(r);
+    rd_t(r, flex);
     let dr = done(r, "Metadata");
     guard let _d = dr else let e = err_of(dr) { return err(e); }
     return ok(out);

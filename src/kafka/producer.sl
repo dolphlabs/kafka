@@ -621,43 +621,46 @@ fn produce_request(p: Producer, g: NodeBatches) {
         if p.opts.transactional_id != "" {
             txn_id = some(p.opts.transactional_id);
         }
-        let body = new_buf();
-        enc_produce(body, txn_id, p.opts.acks, p.cl.cfg.request_timeout_ms, topics);
-        if p.opts.acks == 0 {
-            let cr = conn_to(p.cl, g.node, "produce", after_ms(p.cl.cfg.request_timeout_ms));
-            let ok_sent = false;
-            if let c = cr {
+        let cr = conn_to(p.cl, g.node, "produce", after_ms(p.cl.cfg.request_timeout_ms));
+        if let c = cr {
+            let v = conn_version(c, API_PRODUCE);
+            let body = new_buf();
+            enc_produce_v(body, v, txn_id, p.opts.acks, p.cl.cfg.request_timeout_ms, topics);
+            if p.opts.acks == 0 {
                 let sr = send_request(c, API_PRODUCE, body, false);
-                if let _s = sr {
-                    ok_sent = true;
+                for b in sent {
+                    if let _s = sr {
+                        finish_batch(p, b, -1, -1, "");
+                    } else let e = err_of(sr) {
+                        retry_batch(p, b, e);
+                    }
+                    release(p, b);
                 }
-            }
-            for b in sent {
-                if ok_sent {
-                    finish_batch(p, b, -1, -1, "");
-                } else {
-                    retry_batch(p, b, "kafka: no connection to broker " + to_str(g.node));
-                }
-                release(p, b);
-            }
-        } else {
-            let rr = call_node(p.cl, g.node, "produce", API_PRODUCE, body, after_ms(p.cl.cfg.request_timeout_ms));
-            if let r = rr {
-                let dr = dec_produce(r);
-                if let res = dr {
-                    handle_produce(p, sent, res);
-                } else let e = err_of(dr) {
+            } else {
+                let rr = call_conn(c, API_PRODUCE, body, after_ms(p.cl.cfg.request_timeout_ms));
+                if let r = rr {
+                    let dr = dec_produce_v(r, v);
+                    if let res = dr {
+                        handle_produce(p, sent, res);
+                    } else let e = err_of(dr) {
+                        for b in sent {
+                            retry_batch(p, b, e);
+                            release(p, b);
+                        }
+                    }
+                } else let e = err_of(rr) {
+                    metadata_stale(p.cl);
                     for b in sent {
                         retry_batch(p, b, e);
                         release(p, b);
                     }
                 }
-            } else let e = err_of(rr) {
-                metadata_stale(p.cl);
-                for b in sent {
-                    retry_batch(p, b, e);
-                    release(p, b);
-                }
+            }
+        } else let e = err_of(cr) {
+            metadata_stale(p.cl);
+            for b in sent {
+                retry_batch(p, b, e);
+                release(p, b);
             }
         }
     }

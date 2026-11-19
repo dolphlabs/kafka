@@ -425,19 +425,26 @@ fn fetch_one(c: Consumer, plan: FetchPlan) {
     let f = FetchReq { max_wait_ms: c.opts.fetch_max_wait_ms, min_bytes: c.opts.fetch_min_bytes,
                        max_bytes: c.opts.fetch_max_bytes, isolation: c.opts.isolation, session_id: 0, session_epoch: -1,
                        topics: topics, forgotten: [], rack: c.cl.cfg.rack };
-    let body = new_buf();
-    enc_fetch(body, f);
-    let rr = call_node(c.cl, plan.node, "fetch#" + to_str(c.uid), API_FETCH, body,
-                       after_ms(c.opts.fetch_max_wait_ms + c.cl.cfg.request_timeout_ms));
     let got = false;
-    if let r = rr {
-        let dr = dec_fetch(r);
-        if let res = dr {
-            got = handle_fetch(c, plan, res);
-        } else let e = err_of(dr) {
-            c.pending_err = e;
+    let cr = conn_to(c.cl, plan.node, "fetch#" + to_str(c.uid), after_ms(c.cl.cfg.request_timeout_ms));
+    if let conn = cr {
+        let v = conn_version(conn, API_FETCH);
+        let body = new_buf();
+        enc_fetch_v(body, v, f);
+        let rr = call_timeout(conn, API_FETCH, body, after_ms(c.opts.fetch_max_wait_ms + c.cl.cfg.request_timeout_ms),
+                              c.opts.fetch_max_wait_ms + c.cl.cfg.request_timeout_ms);
+        if let r = rr {
+            let dr = dec_fetch_v(r, v);
+            if let res = dr {
+                got = handle_fetch(c, plan, res);
+            } else let e = err_of(dr) {
+                c.pending_err = e;
+            }
+        } else let e = err_of(rr) {
+            metadata_stale(c.cl);
+            sleep_ms(c.cl.cfg.retry_backoff_ms);
         }
-    } else let e = err_of(rr) {
+    } else let e = err_of(cr) {
         metadata_stale(c.cl);
         sleep_ms(c.cl.cfg.retry_backoff_ms);
     }

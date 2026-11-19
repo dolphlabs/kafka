@@ -107,9 +107,13 @@ pub fn enc_heartbeat(w: Buf, group: str, generation: int, member_id: str, instan
 // The error code of a response that is throttle time, error code and
 // tagged fields (Heartbeat, AddOffsetsToTxn, EndTxn).
 pub fn dec_error_only(r: Reader, what: str) -> result[int, str] {
+    return dec_error_only_v(r, what, true);
+}
+
+pub fn dec_error_only_v(r: Reader, what: str, flex: bool) -> result[int, str] {
     rd_i32(r);
     let code = rd_i16(r);
-    rd_tags(r);
+    rd_t(r, flex);
     let dr = done(r, what);
     guard let _d = dr else let e = err_of(dr) { return err(e); }
     return ok(code);

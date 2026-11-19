@@ -38,6 +38,24 @@ fn txn_or_any_call(p: Producer, key: int, body: Buf, deadline: until) -> result[
     }
 }
 
+// AddOffsetsToTxn at the version the coordinator takes (v1 on Redpanda):
+// its error code.
+fn add_offsets_call(p: Producer, group: str, deadline: until) -> result[int, str] {
+    let nr = coordinator(p.cl, p.opts.transactional_id, COORDINATOR_TRANSACTION, deadline);
+    guard let node = nr else let e = err_of(nr) { return err(e); }
+    let cr = conn_to(p.cl, node, "ctl", deadline);
+    guard let c = cr else let e = err_of(cr) { return err(e); }
+    let v = conn_version(c, API_ADD_OFFSETS_TO_TXN);
+    let body = new_buf();
+    enc_add_offsets_to_txn_v(body, v, p.opts.transactional_id, p.pid, p.epoch, group);
+    let rr = call_conn(c, API_ADD_OFFSETS_TO_TXN, body, deadline);
+    guard let r = rr else let e = err_of(rr) {
+        forget_coordinator(p.cl, p.opts.transactional_id, COORDINATOR_TRANSACTION);
+        return err(e);
+    }
+    return dec_error_only_v(r, "AddOffsetsToTxn", v >= 3);
+}
+
 // Called under p.lock when send puts a record in topic/partition.
 fn note_txn_partition(p: Producer, topic: str, partition: int) {
     p.txn.parts[topic + "/" + to_str(partition)] = true;
@@ -200,11 +218,9 @@ pub fn send_offsets_to_transaction(p: Producer, c: Consumer, deadline: until) ->
     // AddOffsetsToTxn: the coordinator learns the group
     let added = false;
     while !added {
-        let body = new_buf();
-        enc_add_offsets_to_txn(body, p.opts.transactional_id, p.pid, p.epoch, c.opts.group);
-        let rr = txn_or_any_call(p, API_ADD_OFFSETS_TO_TXN, body, deadline);
+        let rr = add_offsets_call(p, c.opts.group, deadline);
         if let r = rr {
-            let code = dec_error_only(r, "AddOffsetsToTxn") ?? -1;
+            let code = r;
             if code == 0 {
                 added = true;
                 p.txn.offsets_added = true;

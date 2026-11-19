@@ -106,7 +106,7 @@ fn serve(s: Srv, scenario: str) {
         kafka.wr_i16(b, 2);
         respond(s, q, b);
     } else if scenario == "produce too old" {
-        respond(s, q, versions_body(7));
+        respond(s, q, versions_body(6));
     } else if scenario == "oversized response" {
         send(s, b"\x0c\x00\x00\x00");
     } else if scenario == "negative size" {

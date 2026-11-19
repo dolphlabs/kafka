@@ -9,11 +9,14 @@
 
 // Every topic in the cluster (internal ones included), sorted by name.
 pub fn list_topics(cl: Client, deadline: until) -> result[[TopicInfo], str] {
+    let cr = any_conn(cl, deadline);
+    guard let c = cr else let e = err_of(cr) { return err(e); }
+    let v = conn_version(c, API_METADATA);
     let body = new_buf();
-    enc_metadata(body, none, false);
-    let rr = call_any(cl, API_METADATA, body, deadline);
+    enc_metadata_v(body, v, none, false);
+    let rr = call_conn(c, API_METADATA, body, deadline);
     guard let r = rr else let e = err_of(rr) { return err(e); }
-    let mr = dec_metadata(r);
+    let mr = dec_metadata_v(r, v);
     guard let m = mr else let e = err_of(mr) { return err(e); }
     apply_metadata(cl, m, true);
     let out: [TopicInfo] = [];
@@ -171,12 +174,15 @@ pub fn list_offset(cl: Client, topic: str, partition: int, timestamp: int, deadl
     for attempt in 0..3 {
         let lr = leader_or_refresh(cl, topic, partition, deadline);
         guard let leader = lr else let e = err_of(lr) { return err(e); }
+        let cr = conn_to(cl, leader, "ctl", deadline);
+        guard let c = cr else let e = err_of(cr) { return err(e); }
+        let v = conn_version(c, API_LIST_OFFSETS);
         let body = new_buf();
-        enc_list_offsets(body, READ_UNCOMMITTED,
-                         [OffsetQuery { topic: topic, partition: partition, leader_epoch: -1, timestamp: timestamp }]);
-        let rr = call_node(cl, leader, "ctl", API_LIST_OFFSETS, body, deadline);
+        enc_list_offsets_v(body, v, READ_UNCOMMITTED,
+                           [OffsetQuery { topic: topic, partition: partition, leader_epoch: -1, timestamp: timestamp }]);
+        let rr = call_conn(c, API_LIST_OFFSETS, body, deadline);
         guard let r = rr else let e = err_of(rr) { return err(e); }
-        let dr = dec_list_offsets(r);
+        let dr = dec_list_offsets_v(r, v);
         guard let res = dr else let e = err_of(dr) { return err(e); }
         for x in res {
             if x.error_code == 0 {
