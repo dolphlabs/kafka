@@ -34,7 +34,9 @@ fn out_room(o: Out, k: int) {
     while c < o.n + k {
         c = c * 2;
     }
-    o.b = o.b[0..o.n] + strings.bytes_zero(c - o.n);
+    let nb = strings.bytes_zero(c);
+    strings.copy_into(nb, 0, o.b, 0, o.n);
+    o.b = nb;
 }
 
 fn out_byte(o: Out, v: int) {
@@ -44,14 +46,8 @@ fn out_byte(o: Out, v: int) {
 }
 
 fn out_copy(o: Out, src: bytes, from: int, to: int) {
-    let k = to - from;
-    out_room(o, k);
-    let n = o.n;
-    let ob = o.b;
-    for i in 0..k {
-        ob[n + i] = src[from + i];
-    }
-    o.n = n + k;
+    out_room(o, to - from);
+    o.n = strings.copy_into(o.b, o.n, src, from, to);
 }
 
 fn out_bytes(o: Out) -> bytes {
@@ -148,10 +144,7 @@ fn snappy_block_decode(src: bytes, from: int, to: int, max: int) -> result[bytes
             if k > to - pos || k > n - d {
                 return err("kafka: snappy: a literal runs past the data");
             }
-            for i in 0..k {
-                out[d + i] = src[pos + i];
-            }
-            d += k;
+            d = strings.copy_into(out, d, src, pos, pos + k);
             pos += k;
             continue;
         }
@@ -185,11 +178,8 @@ fn snappy_block_decode(src: bytes, from: int, to: int, max: int) -> result[bytes
         if k > n - d {
             return err("kafka: snappy: a copy runs past the length");
         }
-        let s = d - off;
-        for i in 0..k {
-            out[d + i] = out[s + i];
-        }
-        d += k;
+        // forward, so a copy that overlaps itself repeats (LZ77)
+        d = strings.copy_into(out, d, out, d - off, d - off + k);
     }
     if d != n {
         return err("kafka: snappy: " + to_str(d) + " bytes decoded of " + to_str(n));

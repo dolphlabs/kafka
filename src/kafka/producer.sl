@@ -597,9 +597,6 @@ fn encode_for(p: Producer, b: PBatch) -> result[bytes, str] {
 }
 
 fn produce_request(p: Producer, g: NodeBatches) {
-    // encoding and compressing a batch allocates large blocks: see grow_stack
-    let scratch: [int] = [];
-    grow_stack(STACK_RESERVE_FRAMES, scratch);
     let topics: [ProduceTopic] = [];
     let at: map[str]int = {};
     let sent: [PBatch] = [];

@@ -183,11 +183,7 @@ pub fn wr_raw(w: Buf, b: bytes) {
         return;
     }
     room(w, k);
-    let n = w.n;
-    for i in 0..k {
-        w.cur[n + i] = b[i];
-    }
-    w.n = n + k;
+    w.n = strings.copy_into(w.cur, w.n, b, 0, k);
 }
 
 fn wr_text(w: Buf, s: str) {

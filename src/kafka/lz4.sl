@@ -13,6 +13,8 @@
 // little-endian offset and the extra match length. The last sequence is
 // literals only.
 
+import "strings";
+
 let LZ4_MAGIC = 0x184d2204;
 let LZ4_BLOCK = 65536;
 let P1 = 2654435761;
@@ -264,13 +266,8 @@ fn lz4_block_decode(o: Out, src: bytes, from: int, to: int, start: int, max: int
             return err("kafka: lz4: more than " + to_str(max) + " bytes decompressed");
         }
         out_room(o, ml);
-        let d = o.n;
-        let s = d - off;
-        let b = o.b;
-        for i in 0..ml {
-            b[d + i] = b[s + i];
-        }
-        o.n = d + ml;
+        // forward, so a match that overlaps itself repeats (LZ77)
+        o.n = strings.copy_into(o.b, o.n, o.b, o.n - off, o.n - off + ml);
     }
     return ok(true);
 }
