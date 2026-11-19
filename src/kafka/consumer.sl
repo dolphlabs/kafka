@@ -105,6 +105,10 @@ pub gc struct Consumer {
     next_id: int,
     // this consumer's connections: "fetch#<uid>", "group:<id>#<uid>"
     uid: int,
+    // brokers with a fetch in flight: one at a time per broker, so a
+    // long-polling fetch never holds up one with data behind it on the
+    // same connection
+    fetching_nodes: map[int]bool,
     // the group (group.sl)
     member_id: str,
     generation: int,
@@ -126,7 +130,7 @@ fn new_consumer(cl: Client, o: ConsumerOptions) -> result[Consumer, str] {
     }
     return ok(Consumer { cl: cl, opts: o, lock: make_mutex(), subscribed: [], parts: {}, order: [], buffered: 0,
                          ready: make_chan(1), wake: make_chan(1), fatal: "", pending_err: "", closing: false,
-                         closed: false, rr: 0, next_id: 0, uid: next_consumer_uid(cl), member_id: "", generation: -1, leader_id: "", protocol: "",
+                         closed: false, rr: 0, next_id: 0, uid: next_consumer_uid(cl), fetching_nodes: {}, member_id: "", generation: -1, leader_id: "", protocol: "",
                          rejoin: false, assigned_counts: {}, last_commit_ns: now_ns(), group_done: make_chan(1),
                          fetch_done: make_chan(1) });
 }
@@ -382,6 +386,10 @@ fn fetch_loop(c: Consumer) {
     kick(c.fetch_done);
 }
 
+// A broker's partitions are fetched together, once everything the last
+// fetch from it returned has been polled: a fetch that holds a partition
+// with data comes back at once, so one caught-up partition never makes
+// the others wait out fetch_max_wait_ms.
 fn plan_fetches(c: Consumer) -> map[int]FetchPlan {
     let plans: map[int]FetchPlan = {};
     mutex_lock(c.lock);
@@ -389,13 +397,23 @@ fn plan_fetches(c: Consumer) -> map[int]FetchPlan {
         mutex_unlock(c.lock);
         return plans;
     }
+    let busy: map[int]bool = {};
+    let leaders: map[str]int = {};
     for ps in c.order {
-        if ps.paused || ps.fetching || ps.position < 0 || ps.qhead < len(ps.queue) {
-            continue;
-        }
         let leader = leader_of(c.cl, ps.topic, ps.partition);
+        leaders[part_key(ps.topic, ps.partition)] = leader;
         if leader < 0 {
             metadata_stale(c.cl);
+            continue;
+        }
+        if has(c.fetching_nodes, leader) || (ps.qhead < len(ps.queue) && !ps.paused) {
+            busy[leader] = true;
+        }
+    }
+    for ps in c.order {
+        let leader = leaders[part_key(ps.topic, ps.partition)];
+        if leader < 0 || has(busy, leader) || ps.paused || ps.fetching || ps.position < 0 ||
+           ps.qhead < len(ps.queue) {
             continue;
         }
         if !has(plans, leader) {
@@ -405,6 +423,9 @@ fn plan_fetches(c: Consumer) -> map[int]FetchPlan {
         push(plans[leader].parts, ps);
         push(plans[leader].seqs, ps.seq);
         push(plans[leader].offsets, ps.position);
+    }
+    for node, _p in plans {
+        c.fetching_nodes[node] = true;
     }
     mutex_unlock(c.lock);
     return plans;
@@ -452,6 +473,7 @@ fn fetch_one(c: Consumer, plan: FetchPlan) {
     for ps in plan.parts {
         ps.fetching = false;
     }
+    del(c.fetching_nodes, plan.node);
     mutex_unlock(c.lock);
     if got {
         kick(c.ready);

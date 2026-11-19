@@ -1,0 +1,28 @@
+codec=0 slang produce records=1000000 ms=3731 rec/s=268022 MB/s=26 cpu_s=5.39 rss_mb=237
+codec=0 slang consume records=1000000 ms=1683 rec/s=594030 MB/s=59 cpu_s=1.43 rss_mb=190
+codec=0 go produce records=1000000 ms=1032 rec/s=968811 MB/s=96 cpu_s=1.26 rss_mb=46
+codec=0 go consume records=1000000 ms=560 rec/s=1785133 MB/s=178 cpu_s=0.42 rss_mb=39
+codec=0 go produce records=1000000 ms=1357 rec/s=736878 MB/s=73 cpu_s=1.12 rss_mb=43
+codec=0 go consume records=1000000 ms=436 rec/s=2291566 MB/s=229 cpu_s=0.38 rss_mb=39
+codec=0 slang produce records=1000000 ms=3670 rec/s=272470 MB/s=27 cpu_s=5.35 rss_mb=228
+codec=0 slang consume records=1000000 ms=1592 rec/s=628079 MB/s=62 cpu_s=1.5 rss_mb=201
+codec=3 slang produce records=1000000 ms=3498 rec/s=285829 MB/s=28 cpu_s=5.66 rss_mb=243
+codec=3 slang consume records=1000000 ms=2605 rec/s=383817 MB/s=38 cpu_s=2.74 rss_mb=255
+codec=3 go produce records=1000000 ms=474 rec/s=2107025 MB/s=210 cpu_s=0.81 rss_mb=67
+codec=3 go consume records=1000000 ms=409 rec/s=2439743 MB/s=243 cpu_s=0.6 rss_mb=297
+codec=3 go produce records=1000000 ms=414 rec/s=2411661 MB/s=241 cpu_s=0.78 rss_mb=73
+codec=3 go consume records=1000000 ms=456 rec/s=2189417 MB/s=218 cpu_s=0.62 rss_mb=297
+codec=3 slang produce records=1000000 ms=3108 rec/s=321750 MB/s=32 cpu_s=5.12 rss_mb=225
+codec=3 slang consume records=1000000 ms=2505 rec/s=399108 MB/s=39 cpu_s=2.64 rss_mb=247
+codec=4 slang produce records=1000000 ms=5003 rec/s=199857 MB/s=19 cpu_s=7.01 rss_mb=283
+codec=4 slang consume records=1000000 ms=2753 rec/s=363141 MB/s=36 cpu_s=2.9 rss_mb=377
+codec=4 go produce records=1000000 ms=531 rec/s=1881827 MB/s=188 cpu_s=1.06 rss_mb=63
+codec=4 go consume records=1000000 ms=329 rec/s=3036295 MB/s=303 cpu_s=0.48 rss_mb=293
+codec=4 go produce records=1000000 ms=447 rec/s=2234820 MB/s=223 cpu_s=0.88 rss_mb=67
+codec=4 go consume records=1000000 ms=313 rec/s=3189747 MB/s=318 cpu_s=0.52 rss_mb=284
+codec=4 slang produce records=1000000 ms=3472 rec/s=287959 MB/s=28 cpu_s=6 rss_mb=262
+bench/run.sh: line 40: 16954 Bus error: 10           /usr/bin/time -l env BENCH_BROKERS=localhost:19092 BENCH_MODE="$mode" BENCH_TOPIC="$t" BENCH_N="$N" "$@" "$run_dir/$client" > "$run_dir/out" 2> "$run_dir/time"
+slang latency records=2000 p50_us=1491 p99_us=2495 cpu_s=1.61 rss_mb=4
+go latency records=2000 p50_us=1550 p99_us=2352 cpu_s=1.22 rss_mb=13
+go latency records=2000 p50_us=1170 p99_us=2176 cpu_s=1.05 rss_mb=13
+slang latency records=2000 p50_us=1005 p99_us=1856 cpu_s=1.5 rss_mb=4
