@@ -24,6 +24,9 @@ import "strings";
 
 pub enum Reset { Earliest, Latest, None }
 
+// Frames grow_stack recurses through before a fetch decodes.
+let STACK_RESERVE_FRAMES = 256;
+
 pub gc struct ConsumerOptions {
     // "" for a consumer without a group (assign only, no commits)
     group: str,
@@ -168,7 +171,7 @@ fn next_consumer_uid(cl: Client) -> int {
 }
 
 fn part_key(topic: str, partition: int) -> str {
-    return topic + "/" + to_str(partition);
+    return topic + "/" + itoa(partition);
 }
 
 // Replaces the assignment (an eager rebalance: everything is new).
@@ -431,7 +434,24 @@ fn plan_fetches(c: Consumer) -> map[int]FetchPlan {
     return plans;
 }
 
+// Grows the calling task's stack by roughly depth frames, through calls
+// the compiler cannot fold into a loop. A task's stack grows only at slang
+// calls and promises about 2 KB below them, but macOS's malloc takes a
+// path with a frame over 4 KB for large blocks, and decompressing a fetch
+// allocates megabytes deep in this task: without headroom made here, that
+// malloc runs off the stack (a slang runtime limit; see bench/README.md).
+fn grow_stack(depth: int, acc: [int]) -> int {
+    if depth <= 0 {
+        return len(acc);
+    }
+    let below = grow_stack(depth - 1, acc);
+    push(acc, below);
+    return below + 1;
+}
+
 fn fetch_one(c: Consumer, plan: FetchPlan) {
+    let scratch: [int] = [];
+    grow_stack(STACK_RESERVE_FRAMES, scratch);
     let topics: [FetchTopic] = [];
     let at: map[str]int = {};
     for i in 0..len(plan.parts) {

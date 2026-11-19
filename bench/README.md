@@ -18,13 +18,13 @@ Docker Desktop on the same machine).
 
 | workload | slang | franz-go | slang / go |
 |---|---|---|---|
-| produce, none | 270k rec/s, 5.4 s CPU, 233 MB | 850k rec/s, 1.2 s CPU, 45 MB | 0.32x |
-| produce, lz4 | 300k rec/s, 5.4 s CPU, 234 MB | 2.26M rec/s, 0.8 s CPU, 70 MB | 0.13x |
-| produce, zstd | 240k rec/s, 6.5 s CPU, 273 MB | 2.06M rec/s, 1.0 s CPU, 65 MB | 0.12x |
-| consume, none | 610k rec/s, 1.5 s CPU, 196 MB | 2.04M rec/s, 0.4 s CPU, 39 MB | 0.30x |
-| consume, lz4 | 390k rec/s, 2.7 s CPU, 251 MB | 2.31M rec/s, 0.6 s CPU, 297 MB | 0.17x |
-| consume, zstd | 363k rec/s, 2.9 s CPU, 377 MB | 3.11M rec/s, 0.5 s CPU, 289 MB | 0.12x (one run; see below) |
-| latency p50 / p99 | 1.25 / 2.18 ms, 4 MB | 1.36 / 2.26 ms, 13 MB | on par |
+| produce, none | 301k rec/s, 5.1 s CPU, 203 MB | 961k rec/s, 1.2 s CPU, 44 MB | 0.31x |
+| produce, lz4 | 320k rec/s, 5.3 s CPU, 198 MB | 2.20M rec/s, 0.8 s CPU, 68 MB | 0.15x |
+| produce, zstd | 249k rec/s, 6.7 s CPU, 257 MB | 2.28M rec/s, 0.9 s CPU, 60 MB | 0.11x |
+| consume, none | 562k rec/s, 1.5 s CPU, 175 MB | 1.95M rec/s, 0.4 s CPU, 40 MB | 0.29x |
+| consume, lz4 | 441k rec/s, 2.4 s CPU, 196 MB | 2.23M rec/s, 0.6 s CPU, 300 MB | 0.20x |
+| consume, zstd | 363k rec/s, 2.9 s CPU, 355 MB | 3.15M rec/s, 0.5 s CPU, 294 MB | 0.12x |
+| latency p50 / p99 | 1.37 / 2.21 ms, 5 MB | 1.38 / 2.79 ms, 13 MB | on par |
 
 ## What the gaps are
 
@@ -46,18 +46,20 @@ Docker Desktop on the same machine).
 
 ## Found by this benchmark
 
-- **Fixed:** consuming uncompressed data ran at 14k rec/s. A fetch for
+- **Fixed: slow uncompressed consuming (14k rec/s).** A fetch for
   caught-up partitions long-polled 500 ms while partitions with data
   waited behind it on the same connection. The consumer now fetches a
-  broker's partitions together, one fetch in flight per broker, once
-  the last response is drained (as franz-go does): 14k -> 610k rec/s.
-- **Open:** the second zstd consume of 1M records dies with
-  "a task overflowed its stack" (SIGBUS in the guard page), every time
-  on a fresh process against the same topic. The fault is in system
-  code called from the fetch task (deep decode path: fetch -> batch ->
-  zstd frame -> block -> sequences -> buffer growth), and the slang
-  runtime grows task stacks only at slang checkpoints with a 2 KB
-  margin. Diagnosis stopped when the machine began refusing to launch
-  any new binary (macOS amfid/syspolicyd stalled); next step is a
-  backtrace and either a slang runtime fix (margin before native calls
-  in deep tasks) or growing the fetch task's stack up front.
+  broker's partitions together, one fetch in flight per broker, once the
+  last response is drained (as franz-go does): 14k -> 560k rec/s.
+- **Fixed in this package, open in slang: a stack overflow on large
+  allocations in deep tasks.** Consuming 1M zstd records died with "a task
+  overflowed its stack" (SIGBUS in the guard page) every time. The fault
+  is `___chkstk_darwin` called from libsystem_malloc: macOS's malloc takes
+  a path with a frame over 4 KB for large blocks, the slang runtime makes
+  such allocations from a task's stack, and a task is only promised 2 KB
+  below a slang call. Decompressing a fetch allocates megabytes deep in
+  the fetch task. The fetch and produce tasks now grow their stacks
+  first (`grow_stack` in consumer.sl): 0 crashes in 5 repeats and in
+  this whole run. The real fix belongs in the slang runtime: reserve
+  stack (as `sl_rt_need_stack` does for OpenSSL and SQLite) before a
+  large allocation.

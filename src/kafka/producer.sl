@@ -194,7 +194,7 @@ fn record_size(r: Record) -> int {
 }
 
 fn queue_for(p: Producer, topic: str, partition: int) -> PartQ {
-    let key = topic + "/" + to_str(partition);
+    let key = topic + "/" + itoa(partition);
     if has(p.queues, key) {
         return p.queues[key];
     }
@@ -310,7 +310,7 @@ fn sticky_partition(p: Producer, topic: str, n: int, size: int) -> int {
     if cur >= n {
         cur = cur % n;
     }
-    let key = topic + "/" + to_str(cur);
+    let key = topic + "/" + itoa(cur);
     if has(p.queues, key) {
         let ob = open_batch(p.queues[key]);
         if let b = ob {
@@ -555,7 +555,7 @@ fn drain(p: Producer) -> int {
     }
     mutex_unlock(p.lock);
     for b in expired {
-        finish_batch(p, b, -1, -1, "kafka: produce to " + b.topic + "/" + to_str(b.partition) + " timed out after " +
+        finish_batch(p, b, -1, -1, "kafka: produce to " + b.topic + "/" + itoa(b.partition) + " timed out after " +
                                    to_str(p.opts.delivery_timeout_ms) + " ms (delivery_timeout_ms)");
     }
     for node, g in groups {
@@ -597,6 +597,9 @@ fn encode_for(p: Producer, b: PBatch) -> result[bytes, str] {
 }
 
 fn produce_request(p: Producer, g: NodeBatches) {
+    // encoding and compressing a batch allocates large blocks: see grow_stack
+    let scratch: [int] = [];
+    grow_stack(STACK_RESERVE_FRAMES, scratch);
     let topics: [ProduceTopic] = [];
     let at: map[str]int = {};
     let sent: [PBatch] = [];
@@ -673,10 +676,10 @@ fn produce_request(p: Producer, g: NodeBatches) {
 fn handle_produce(p: Producer, sent: [PBatch], res: ProduceResp) {
     let by: map[str]ProducedPart = {};
     for x in res.parts {
-        by[x.topic + "/" + to_str(x.partition)] = x;
+        by[x.topic + "/" + itoa(x.partition)] = x;
     }
     for b in sent {
-        let key = b.topic + "/" + to_str(b.partition);
+        let key = b.topic + "/" + itoa(b.partition);
         if !has(by, key) {
             retry_batch(p, b, "kafka: the produce response left out " + key);
             release(p, b);
@@ -748,7 +751,7 @@ fn retry_batch(p: Producer, b: PBatch, why: str) {
 // finished batch leaves the queue.
 fn release(p: Producer, b: PBatch) {
     mutex_lock(p.lock);
-    let key = b.topic + "/" + to_str(b.partition);
+    let key = b.topic + "/" + itoa(b.partition);
     if has(p.queues, key) {
         let q = p.queues[key];
         q.inflight = false;
@@ -783,7 +786,7 @@ fn finish_batch(p: Producer, b: PBatch, base: int, lat: int, e: str) {
     b.err = e;
     b.wire = b"";
     p.buffered -= b.size;
-    let key = b.topic + "/" + to_str(b.partition);
+    let key = b.topic + "/" + itoa(b.partition);
     if has(p.queues, key) && !p.queues[key].inflight {
         pop_finished(p.queues[key]);
     }

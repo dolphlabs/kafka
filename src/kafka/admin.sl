@@ -161,7 +161,7 @@ fn leader_or_refresh(cl: Client, topic: str, partition: int, deadline: until) ->
                 return err("kafka: topic " + topic + " has no partition " + to_str(partition));
             }
         }
-        return err("kafka: " + topic + "/" + to_str(partition) + " has no leader");
+        return err("kafka: " + topic + "/" + itoa(partition) + " has no leader");
     }
     return ok(leader);
 }
@@ -188,7 +188,7 @@ pub fn list_offset(cl: Client, topic: str, partition: int, timestamp: int, deadl
             if x.error_code == 0 {
                 return ok(x.offset);
             }
-            last = kerr("list offsets " + topic + "/" + to_str(partition), x.error_code, "");
+            last = kerr("list offsets " + topic + "/" + itoa(partition), x.error_code, "");
             if !is_retriable(x.error_code) {
                 return err(last);
             }
@@ -211,7 +211,7 @@ pub fn delete_records(cl: Client, topic: str, partition: int, offset: int, deadl
     guard let res = dr else let e = err_of(dr) { return err(e); }
     for x in res {
         if x.error_code != 0 {
-            return err(kerr("delete records " + topic + "/" + to_str(partition), x.error_code, ""));
+            return err(kerr("delete records " + topic + "/" + itoa(partition), x.error_code, ""));
         }
         return ok(x.low_watermark);
     }

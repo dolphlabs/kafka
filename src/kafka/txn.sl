@@ -58,13 +58,13 @@ fn add_offsets_call(p: Producer, group: str, deadline: until) -> result[int, str
 
 // Called under p.lock when send puts a record in topic/partition.
 fn note_txn_partition(p: Producer, topic: str, partition: int) {
-    p.txn.parts[topic + "/" + to_str(partition)] = true;
+    p.txn.parts[topic + "/" + itoa(partition)] = true;
 }
 
 // Called under p.lock by the sender: a transactional batch waits until
 // the coordinator has its partition.
 fn txn_partition_added(p: Producer, topic: str, partition: int) -> bool {
-    return has(p.txn.added, topic + "/" + to_str(partition));
+    return has(p.txn.added, topic + "/" + itoa(partition));
 }
 
 fn txn_fatal(p: Producer, why: str) {
@@ -160,7 +160,7 @@ fn add_txn_partitions(p: Producer) {
     guard let res = dr else let e = err_of(dr) { txn_abortable(p, e, false); return; }
     mutex_lock(p.lock);
     for x in res {
-        let key = x.topic + "/" + to_str(x.partition);
+        let key = x.topic + "/" + itoa(x.partition);
         if x.error_code == 0 {
             p.txn.added[key] = true;
         } else if x.error_code == ERR_PRODUCER_FENCED || x.error_code == ERR_INVALID_PRODUCER_EPOCH ||
