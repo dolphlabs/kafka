@@ -1,0 +1,156 @@
+batch one
+  b base=0 magic=2 codec=0 txn=false control=false pid=-1 epoch=-1 seq=-1 count=1 next=1
+  m off=0 ts=1700000000000 lat=false key=6b value=76 h=[]
+  reencode same
+batch nulls
+  b base=0 magic=2 codec=0 txn=false control=false pid=-1 epoch=-1 seq=-1 count=2 next=2
+  m off=0 ts=1700000000000 lat=false key=null value=null h=[]
+  m off=1 ts=1700000000000 lat=false key= value= h=[]
+  reencode same
+batch headers
+  b base=0 magic=2 codec=0 txn=false control=false pid=-1 epoch=-1 seq=-1 count=1 next=1
+  m off=0 ts=1700000000005 lat=false key=69642d31 value=7b2261223a317d h=[content-type=6170706c69636174696f6e2f6a736f6e,trace=null,=]
+  reencode same
+batch many
+  b base=5000 magic=2 codec=0 txn=false control=false pid=-1 epoch=-1 seq=-1 count=50 next=5050
+  m off=5000 ts=1699999999900 lat=false key=6b65792d30 value= h=[h0=]
+  m off=5001 ts=1699999999937 lat=false key=6b65792d31 value=01 h=[]
+  m off=5002 ts=1699999999974 lat=false key=6b65792d32 value=#63:15d1f2cadb768d49 h=[]
+  m off=5003 ts=1700000000011 lat=false key=null value=#64:39e3d7b6b5d075d3 h=[]
+  m off=5004 ts=1700000000048 lat=false key=6b65792d34 value=#127:bb759489e7e01256 h=[]
+  m off=5005 ts=1700000000085 lat=false key=6b65792d35 value=#128:d79ee579cc4dbafe h=[h5=01080f161d]
+  m off=5006 ts=1700000000122 lat=false key=6b65792d36 value=#129:042fc7ec406005cd h=[]
+  m off=5007 ts=1700000000159 lat=false key=6b65792d37 value=#300:24204112947ea9e0 h=[]
+  m off=5008 ts=1700000000196 lat=false key=6b65792d38 value=#16383:bfbb47862ea9273b h=[]
+  m off=5009 ts=1700000000233 lat=false key=6b65792d39 value=#16384:f9292926fd578c40 h=[]
+  m off=5010 ts=1700000000270 lat=false key=null value=#20000:ceb6188ba9d93141 h=[h10=01080f161d242b323940]
+  m off=5011 ts=1700000000307 lat=false key=6b65792d3131 value= h=[]
+  m off=5012 ts=1700000000344 lat=false key=6b65792d3132 value=0c h=[]
+  m off=5013 ts=1700000000381 lat=false key=6b65792d3133 value=#63:c309180feace42e9 h=[]
+  m off=5014 ts=1700000000418 lat=false key=6b65792d3134 value=#64:971732f1f9b0aae2 h=[]
+  m off=5015 ts=1700000000455 lat=false key=6b65792d3135 value=#127:a5476884f4311068 h=[h15=01080f161d242b323940474e555c63]
+  m off=5016 ts=1700000000492 lat=false key=6b65792d3136 value=#128:4df3c58c90360f41 h=[]
+  m off=5017 ts=1700000000529 lat=false key=null value=#129:2ac4b17720e3d05b h=[]
+  m off=5018 ts=1700000000566 lat=false key=6b65792d3138 value=#300:62b44e1a806bcc57 h=[]
+  m off=5019 ts=1700000000603 lat=false key=6b65792d3139 value=#16383:9747974d32717053 h=[]
+  m off=5020 ts=1700000000640 lat=false key=6b65792d3230 value=#16384:56922f7c648a0990 h=[h20=01080f161d242b323940474e555c636a71787f86]
+  m off=5021 ts=1700000000677 lat=false key=6b65792d3231 value=#20000:5f49e4264c33cd58 h=[]
+  m off=5022 ts=1700000000714 lat=false key=6b65792d3232 value= h=[]
+  m off=5023 ts=1700000000751 lat=false key=6b65792d3233 value=17 h=[]
+  m off=5024 ts=1700000000788 lat=false key=null value=#63:486763246ae996fc h=[]
+  m off=5025 ts=1700000000825 lat=false key=6b65792d3235 value=#64:71ce6554ae7bedc6 h=[h25=01080f161d242b323940474e555c636a71787f868d949ba2a9]
+  m off=5026 ts=1700000000862 lat=false key=6b65792d3236 value=#127:11864b64aaa1cd8a h=[]
+  m off=5027 ts=1700000000899 lat=false key=6b65792d3237 value=#128:5076d5115164e7d9 h=[]
+  m off=5028 ts=1700000000936 lat=false key=6b65792d3238 value=#129:e3bb08cdb21d26d5 h=[]
+  m off=5029 ts=1700000000973 lat=false key=6b65792d3239 value=#300:c46c7ac65d38039c h=[]
+  m off=5030 ts=1700000001010 lat=false key=6b65792d3330 value=#16383:7e75cd3f73171555 h=[h30=01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5cc]
+  m off=5031 ts=1700000001047 lat=false key=null value=#16384:221fe39730cd7330 h=[]
+  m off=5032 ts=1700000001084 lat=false key=6b65792d3332 value=#20000:9e46d7a8f25f0c85 h=[]
+  m off=5033 ts=1700000001121 lat=false key=6b65792d3333 value= h=[]
+  m off=5034 ts=1700000001158 lat=false key=6b65792d3334 value=22 h=[]
+  m off=5035 ts=1700000001195 lat=false key=6b65792d3335 value=#63:6a86ae5a6acaa77f h=[h35=#35:3f80b9ef04f000c4]
+  m off=5036 ts=1700000001232 lat=false key=6b65792d3336 value=#64:666cd9f8a01995c3 h=[]
+  m off=5037 ts=1700000001269 lat=false key=6b65792d3337 value=#127:e9d9afd66c5b2b63 h=[]
+  m off=5038 ts=1700000001306 lat=false key=null value=#128:1f05ad47cfccf6fa h=[]
+  m off=5039 ts=1700000001343 lat=false key=6b65792d3339 value=#129:2b0918cd24fe8075 h=[]
+  m off=5040 ts=1700000001380 lat=false key=6b65792d3430 value=#300:4a7c231aff8b1d4b h=[h40=#40:9b2cc135a6edd01f]
+  m off=5041 ts=1700000001417 lat=false key=6b65792d3431 value=#16383:08c2224e93ea7294 h=[]
+  m off=5042 ts=1700000001454 lat=false key=6b65792d3432 value=#16384:f7955f6373100f74 h=[]
+  m off=5043 ts=1700000001491 lat=false key=6b65792d3433 value=#20000:fa27bfe5fafd96d0 h=[]
+  m off=5044 ts=1700000001528 lat=false key=6b65792d3434 value= h=[]
+  m off=5045 ts=1700000001565 lat=false key=null value=2d h=[h45=#45:bcc5623ceeeca13f]
+  m off=5046 ts=1700000001602 lat=false key=6b65792d3436 value=#63:b4b13c123b43f407 h=[]
+  m off=5047 ts=1700000001639 lat=false key=6b65792d3437 value=#64:8edddcaf4745dd27 h=[]
+  m off=5048 ts=1700000001676 lat=false key=6b65792d3438 value=#127:a99d94653694199e h=[]
+  m off=5049 ts=1700000001713 lat=false key=6b65792d3439 value=#128:aa496c616e452874 h=[]
+  reencode same
+batch producer
+  b base=1000 magic=2 codec=0 txn=true control=false pid=12345 epoch=3 seq=17 count=2 next=1002
+  m off=1000 ts=1700000000000 lat=false key=61 value=31 h=[]
+  m off=1001 ts=1700000000001 lat=false key=62 value=32 h=[]
+  reencode same
+batch control_commit
+  b base=1002 magic=2 codec=0 txn=true control=true pid=12345 epoch=3 seq=-1 count=1 next=1003
+  control type=1
+  reencode same
+batch control_abort
+  b base=1002 magic=2 codec=0 txn=true control=true pid=12345 epoch=3 seq=-1 count=1 next=1003
+  control type=0
+  reencode same
+batch log_append_time
+  b base=70 magic=2 codec=0 txn=false control=false pid=-1 epoch=-1 seq=-1 count=2 next=72
+  m off=70 ts=1700000012345 lat=true key=null value=78 h=[]
+  m off=71 ts=1700000012345 lat=true key=null value=79 h=[]
+batch compacted_gaps
+  b base=200 magic=2 codec=0 txn=false control=false pid=-1 epoch=-1 seq=-1 count=3 next=208
+  m off=200 ts=1700000000000 lat=false key=61 value=6669727374 h=[]
+  m off=202 ts=1700000000003 lat=false key=62 value=null h=[]
+  m off=205 ts=1700000000004 lat=false key=63 value=7468697264 h=[]
+batch gzip
+  b base=300 magic=2 codec=1 txn=false control=false pid=-1 epoch=-1 seq=-1 count=2 next=302
+  m off=300 ts=1700000000000 lat=false key=6731 value=#500:330c5cd208ecf3ce h=[]
+  m off=301 ts=1700000000001 lat=false key=null value=736d616c6c h=[]
+batch partial_tail
+  b base=10 magic=2 codec=0 txn=false control=false pid=-1 epoch=-1 seq=-1 count=1 next=11
+  m off=10 ts=1700000000000 lat=false key=null value=6f6e65 h=[]
+  b base=11 magic=2 codec=0 txn=false control=false pid=-1 epoch=-1 seq=-1 count=2 next=13
+  m off=11 ts=1700000000000 lat=false key=null value=74776f h=[]
+  m off=12 ts=1700000000001 lat=false key=null value=7468726565 h=[]
+  partial
+batch bad_crc
+  error
+batch bad_count
+  b base=0 magic=2 codec=0 txn=false control=false pid=-1 epoch=-1 seq=-1 count=1000000 next=1
+  error
+batch bad_record_length
+  b base=0 magic=2 codec=0 txn=false control=false pid=-1 epoch=-1 seq=-1 count=1 next=1
+  error
+batch v0
+  b base=40 magic=0 codec=0 txn=false control=false pid=-1 epoch=-1 seq=-1 count=1 next=41
+  m off=40 ts=-1 lat=false key=6b30 value=7630 h=[]
+  b base=41 magic=0 codec=0 txn=false control=false pid=-1 epoch=-1 seq=-1 count=1 next=42
+  m off=41 ts=-1 lat=false key=null value=null h=[]
+batch v1
+  b base=60 magic=1 codec=0 txn=false control=false pid=-1 epoch=-1 seq=-1 count=1 next=61
+  m off=60 ts=1700000000001 lat=false key=6b31 value=7631 h=[]
+batch v1_gzip
+  b base=52 magic=1 codec=1 txn=false control=false pid=-1 epoch=-1 seq=-1 count=1 next=53
+  m off=50 ts=1700000000000 lat=false key=61 value=696e6e65722d30 h=[]
+  m off=51 ts=1700000000001 lat=false key=62 value=696e6e65722d31 h=[]
+  m off=52 ts=1700000000002 lat=false key=63 value=696e6e65722d32 h=[]
+batch v0_gzip
+  b base=8 magic=0 codec=1 txn=false control=false pid=-1 epoch=-1 seq=-1 count=1 next=9
+  m off=7 ts=-1 lat=false key=null value=6f6c642d30 h=[]
+  m off=8 ts=-1 lat=false key=null value=6f6c642d31 h=[]
+varint 0 ok
+varint 1 ok
+varint -1 ok
+varint 63 ok
+varint -64 ok
+varint 64 ok
+varint -65 ok
+varint 127 ok
+varint 128 ok
+varint 300 ok
+varint -300 ok
+varint 8191 ok
+varint -8192 ok
+varint 1048576 ok
+varint 2147483647 ok
+varint -2147483648 ok
+varlong 0 ok
+varlong -1 ok
+varlong 1099511627776 ok
+varlong -1099511627776 ok
+varlong 9223372036854775807 ok
+varlong -9223372036854775808 ok
+varlong 1700000000000 ok
+uvarint 0 ok
+uvarint 1 ok
+uvarint 127 ok
+uvarint 128 ok
+uvarint 16383 ok
+uvarint 16384 ok
+uvarint 2097151 ok
+uvarint 2097152 ok
+uvarint 4294967295 ok
