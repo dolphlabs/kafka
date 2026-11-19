@@ -1,3 +1,4 @@
 *.o
 /tests/**/main
 /tests/codec/slang-out.bin
+/main
