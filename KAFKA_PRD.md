@@ -170,7 +170,7 @@ client implements; a broker that lacks one is refused at connect):
 | ListOffsets | 2 | 6 | 2.8 |
 | Metadata | 3 | 9 | 2.4 |
 | OffsetCommit | 8 | 8 | 2.4 |
-| OffsetFetch | 9 | 6 | 2.4 |
+| OffsetFetch | 9 | 7 | 2.5 |
 | FindCoordinator | 10 | 3 | 2.4 |
 | JoinGroup | 11 | 6 | 2.4 |
 | Heartbeat | 12 | 4 | 2.4 |
@@ -183,7 +183,7 @@ client implements; a broker that lacks one is refused at connect):
 | CreateTopics | 19 | 5 | 2.4 |
 | DeleteTopics | 20 | 4 | 2.4 |
 | DeleteRecords | 21 | 2 | 2.6 |
-| InitProducerId | 22 | 2 | 2.4 |
+| InitProducerId | 22 | 4 | 2.7 |
 | AddPartitionsToTxn | 24 | 3 | 2.8 |
 | AddOffsetsToTxn | 25 | 3 | 2.8 |
 | EndTxn | 26 | 3 | 2.8 |

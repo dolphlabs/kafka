@@ -4,9 +4,10 @@ An Apache Kafka client for slang: producers, consumers and consumer
 groups over the stdlib `net` package, with deadlines, verified TLS, SASL
 and bounded memory. The plan is [KAFKA_PRD.md](KAFKA_PRD.md).
 
-**Status:** milestones 1-2 of 9: the wire layer (primitive types,
-CRC-32C, record batches v2 and message sets v0/v1) and the four codecs
-(gzip through the stdlib; snappy, lz4 and zstd written in slang).
+**Status:** milestones 1-3 of 9: the wire layer (primitive types,
+CRC-32C, record batches v2 and message sets v0/v1), the four codecs
+(gzip through the stdlib; snappy, lz4 and zstd written in slang), and the
+request and response codecs for the 28 APIs the client uses.
 
 ## Tests
 
@@ -26,6 +27,10 @@ size, HC), golang/snappy (raw and xerial-framed) and gzip wrote from eight
 inputs; round trips each input through the slang encoders; truncates and
 corrupts every vector (624 mutations, which must fail cleanly); and checks
 that every decoder stops at its size limit.
+
+`tests/protocol` encodes 34 requests and must match franz-go's `kmsg`
+byte for byte, decodes 35 responses `kmsg` encoded and must print the
+values `tests/protocol/gen` set, and refuses each response cut short.
 
     make interop SLANGC=/path/to/slangc
 

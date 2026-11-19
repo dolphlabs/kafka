@@ -91,3 +91,34 @@ fn test_compressed_batch_round_trip() {
         assert(ms[299].timestamp == 5299);
     }
 }
+
+fn test_error_names() {
+    assert(error_text(6) == "NOT_LEADER_OR_FOLLOWER (6)");
+    assert(error_name(-1) == "UNKNOWN_SERVER_ERROR");
+    assert(error_name(9999) == "UNKNOWN_ERROR_9999");
+    assert(is_retriable(ERR_NOT_LEADER_OR_FOLLOWER) && is_retriable(ERR_COORDINATOR_LOAD_IN_PROGRESS));
+    assert(!is_retriable(ERR_TOPIC_AUTHORIZATION_FAILED) && !is_retriable(ERR_PRODUCER_FENCED));
+    assert(kerr("produce t/0", 10, "too big") == "kafka: produce t/0: MESSAGE_TOO_LARGE (10): too big");
+}
+
+fn test_every_api_has_a_version() {
+    for k in [0, 1, 2, 3, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 28, 32, 36, 37, 42, 44] {
+        assert(api_version(k) >= 0, api_name(k));
+        assert(api_flexible(k) == (k != API_SASL_HANDSHAKE));
+    }
+    assert(api_version(4) == -1);
+}
+
+fn test_response_reader_checks_the_correlation_id() {
+    let w = new_buf();
+    wr_i32(w, 9);
+    wr_tags(w);
+    wr_i32(w, 0);
+    wr_i16(w, 0);
+    wr_tags(w);
+    let b = w.finish();
+    assert(err_of(response_reader(API_HEARTBEAT, b, 8)) == "kafka: a response for request 9 where 8 was next");
+    let rr = response_reader(API_HEARTBEAT, b, 9);
+    guard let r = rr else { panic("reader"); }
+    assert((dec_error_only(r, "Heartbeat") ?? -1) == 0);
+}

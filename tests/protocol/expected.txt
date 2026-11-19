@@ -1,0 +1,125 @@
+req api_versions same
+req metadata_topics same
+req metadata_all same
+req find_coordinator_group same
+req find_coordinator_txn same
+req sasl_handshake same
+req sasl_authenticate same
+req produce same
+req produce_no_txn same
+req fetch same
+req list_offsets same
+req join_group same
+req sync_group same
+req heartbeat same
+req leave_group same
+req offset_commit same
+req offset_fetch same
+req offset_fetch_all same
+req describe_groups same
+req list_groups same
+req delete_groups same
+req create_topics same
+req delete_topics same
+req delete_records same
+req create_partitions same
+req describe_configs same
+req alter_configs same
+req init_producer_id same
+req init_producer_id_txn same
+req add_partitions_to_txn same
+req add_offsets_to_txn same
+req end_txn same
+req txn_offset_commit same
+req frame_api_versions same
+resp api_versions
+  error=0 throttle=5
+  api 0 3..9
+  api 1 4..12
+  api 18 0..3
+resp api_versions_v0
+  error=35 throttle=0
+  api 18 0..2
+resp metadata
+  cluster=cid controller=1
+  broker 1 b1:9092 rack=r1
+  broker 2 b2:9093 rack=null
+  topic t error=0 internal=false
+    part 0 error=0 leader=1 epoch=4 replicas=[1 2] isr=[1] offline=[2]
+  topic missing error=3 internal=false
+resp find_coordinator_error
+  error=15 msg=not available node=-1 :-1
+resp find_coordinator
+  error=0 msg= node=2 b2:9093
+resp sasl_handshake
+  error=33 mechanisms=[PLAIN SCRAM-SHA-256]
+resp sasl_authenticate
+  error=0 msg= auth=r=abc lifetime=3600000
+resp produce
+  throttle=3
+  part t/0 error=0 base=100 lat=-1 lso=0 msg=
+  part t/1 error=87 base=-1 lat=-1 lso=-1 msg=bad record
+    record 2 null key on a compacted topic
+resp fetch
+  error=0 session=7
+  part t/0 error=0 hw=120 lso=118 start=0 aborted=[5@100] preferred=-1 records=xyz
+  part t/1 error=1 hw=-1 lso=-1 start=-1 aborted=null preferred=3 records=
+resp list_offsets
+  offset t/0 error=0 ts=-1 offset=100 epoch=3
+  offset t/1 error=6 ts=-1 offset=-1 epoch=-1
+resp join_group
+  error=0 generation=3 protocol=range leader=m1 member=m1
+  member m1 instance=i1 meta=meta1
+  member m2 instance=null meta=meta2
+resp sync_group
+  error=0 assignment=assignment
+resp heartbeat
+  error=27
+resp leave_group
+  error=25
+resp offset_commit
+  part t/0 error=0
+  part t/1 error=22
+resp offset_fetch
+  error=0
+  committed t/0 offset=100 epoch=2 meta=x error=0
+  committed t/1 offset=-1 epoch=-1 meta= error=0
+resp describe_groups
+  group g error=0 state=Stable type=consumer protocol=range
+    member m1 instance=null client=c host=/10.0.0.1 meta=md assignment=as
+resp list_groups
+  error=0
+  group g type=consumer
+  group h type=
+resp delete_groups
+  result g error=0 msg=
+  result h error=69 msg=
+resp create_topics
+  topic t error=0 msg= partitions=3 rf=2
+  topic u error=36 msg=exists partitions=-1 rf=-1
+resp delete_topics
+  result t error=0 msg=
+  result u error=3 msg=
+resp delete_records
+  deleted t/0 low=100 error=0
+resp create_partitions
+  result t error=0 msg=
+  result u error=37 msg=bad
+resp describe_configs
+  resource 2 t error=0 msg=
+    config retention.ms=1000 ro=false source=1 sensitive=false
+    config sasl.jaas.config=null ro=true source=4 sensitive=true
+resp alter_configs
+  result t error=40 msg=bad value
+resp init_producer_id
+  error=0 pid=5 epoch=2
+resp add_partitions_to_txn
+  part t/0 error=0
+  part t/1 error=51
+resp add_offsets_to_txn
+  error=0
+resp end_txn
+  error=48
+resp txn_offset_commit
+  part t/0 error=0
+truncated 60 of 60 responses refused
