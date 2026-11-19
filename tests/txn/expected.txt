@@ -1,0 +1,20 @@
+begin: ok
+commit 10: ok
+abort 5: ok
+commit 3: ok
+read_committed sees: ax10 cx3
+read_uncommitted sees: ax10 bx5 cx3
+while open, read_committed sees: ax10 cx3
+after commit, read_committed sees: ax10 cx3 dx4
+first instance commits: ok
+second instance has a later epoch: true
+fenced instance commit refused: kafka: add t-fence/0 to the transaction: PRODUCER_FENCED (90)
+second instance commits: ok
+read_committed sees: ax2 bx2
+consume-transform-produce: 20 in, group offset committed in the transaction 20
+eos-out read_committed: ox20
+send outside a transaction: kafka: a transactional producer sends inside begin_transaction and commit/abort
+commit without begin: kafka: no transaction is open
+begin twice: kafka: a transaction is already open
+empty transaction commits: ok
+begin without a transactional_id: kafka: this producer has no transactional_id

@@ -15,7 +15,9 @@ per partition, murmur2 and sticky partitioning, every codec, acks 0/1/all,
 idempotence with retries that never duplicate or reorder); and the
 consumer (assigned partitions or consumer groups with range, round-robin
 and sticky assignment, static membership, automatic and manual commits,
-seek, pause and resume, every reset policy, `read_committed`).
+seek, pause and resume, every reset policy, `read_committed`); and
+transactions (begin, commit, abort, fencing, and exactly-once
+consume-transform-produce with `send_offsets_to_transaction`).
 
 Needs slang built from `dev` at 7a5bfe1 or later (SCRAM-SHA-512 uses
 `crypto.hmac_sha512`, which the 0.2.5 release lacks).
@@ -96,6 +98,12 @@ partitions, seek, pause and resume, a position deleted from under the
 consumer, every reset policy, a group that commits and resumes exactly
 there, two members splitting six partitions and sharing 600 records with
 no loss or duplicates, a member leaving, and a static member rejoining.
+`tests/txn` (needs go): commits and aborts as `read_committed` and
+`read_uncommitted` consumers see them, an open transaction holding
+`read_committed` back until it commits, a second instance fencing the
+first (PRODUCER_FENCED, its records never visible), 20 records consumed,
+transformed and produced with the group's offsets committed in the same
+transactions, and misuse.
 
     make interop SLANGC=/path/to/slangc
 

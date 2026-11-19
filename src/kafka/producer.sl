@@ -479,8 +479,15 @@ gc struct NodeBatches {
 // Sends every batch that is ready. Returns the nanoseconds until the next
 // one will be (-1: none is waiting).
 fn drain(p: Producer) -> int {
-    if p.bump_epoch && p.opts.idempotent {
+    if p.bump_epoch && p.opts.idempotent && p.opts.transactional_id == "" {
         bump(p);
+    }
+    if p.opts.transactional_id != "" && p.txn.in_txn {
+        add_txn_partitions(p);
+    }
+    if p.txn.fatal != "" {
+        fail_queued(p, p.txn.fatal);
+        return -1;
     }
     let now = now_ns();
     let linger = p.opts.linger_ms * MS;
@@ -525,6 +532,7 @@ fn drain(p: Producer) -> int {
             continue;
         }
         if p.opts.transactional_id != "" && !txn_partition_added(p, q.topic, q.partition) {
+            next = sooner(next, p.cl.cfg.retry_backoff_ms * MS);
             continue;
         }
         if b.base_seq < 0 && p.opts.idempotent {
@@ -781,6 +789,24 @@ fn finish_batch(p: Producer, b: PBatch, base: int, lat: int, e: str) {
         txn_abortable(p, e, false);
     }
     chan_close(b.done);
+}
+
+// Fails every batch not in flight (the producer is fenced).
+fn fail_queued(p: Producer, why: str) {
+    let gone: [PBatch] = [];
+    mutex_lock(p.lock);
+    for q in p.order {
+        if q.inflight {
+            continue;
+        }
+        for i in q.head..len(q.batches) {
+            push(gone, q.batches[i]);
+        }
+    }
+    mutex_unlock(p.lock);
+    for b in gone {
+        finish_batch(p, b, -1, -1, why);
+    }
 }
 
 // A new epoch after the broker lost our sequence: every partition's
