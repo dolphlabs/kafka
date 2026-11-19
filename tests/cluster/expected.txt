@@ -1,0 +1,29 @@
+connect: cluster=slang-kafka-test brokers=3 controller_known=true
+list_topics: seeded partitions=3 with_leaders=3
+create orders: ok true
+create orders again: ok false
+describe orders: orders partitions=6 with_leaders=6
+grow orders to 8: ok true
+describe orders: orders partitions=8 with_leaders=8
+offsets orders/0 earliest=0 orders/7 latest=0
+offsets orders/99: kafka: topic orders has no partition 99
+describe no-such-topic: kafka: topic no-such-topic: UNKNOWN_TOPIC_OR_PARTITION (3)
+set retention.ms: ok true
+retention.ms=3600000 source=1
+groups: 0
+delete orders: ok true
+orders listed after delete: false
+after close: kafka: the client is closed
+no sasl: kafka: broker KAFKA_SASL closed the connection
+plain without tls: kafka: SASL PLAIN sends the password in the clear: use TLS, or set sasl_plain_without_tls
+plain allowed: connected, 1 broker
+plain wrong password: kafka: SASL PLAIN authentication failed: Authentication failed: Invalid username or password
+scram-sha-256: connected, 1 broker
+scram-sha-256 wrong password: kafka: SASL SCRAM-SHA-256 authentication failed: Authentication failed during authentication due to invalid credentials with SASL mechanism SCRAM-SHA-256
+scram-sha-512: connected, 1 broker
+scram-sha-512 unknown user: kafka: SASL SCRAM-SHA-512 authentication failed: Authentication failed during authentication due to invalid credentials with SASL mechanism SCRAM-SHA-512
+tls+scram create: ok true
+tls without the CA refused: true
+dead seed then a live one: connected to 3 brokers
+only dead seeds: kafka: dial 127.0.0.1:1: Connection refused
+no port: kafka: broker address localhost has no port
