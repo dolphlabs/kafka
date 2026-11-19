@@ -1,5 +1,5 @@
 old broker: kafka: broker 127.0.0.1:PORT is older than Kafka 2.4 (no ApiVersions v3); this client needs Kafka 3.0 or later
-produce too old: kafka: broker 127.0.0.1:PORT supports Produce v0-7; this client sends v9 (Kafka 3.0 or later is needed)
+produce too old: kafka: broker 127.0.0.1:PORT supports Produce v0-6; this client sends v9 or v7 (Kafka 3.0 or later is needed)
 oversized response: kafka: broker 127.0.0.1:PORT sent a 201326592-byte response, over max_response_bytes (104857600)
 negative size: kafka: broker 127.0.0.1:PORT sent a response of 4294967280 bytes
 wrong correlation id: kafka: a response for request 2 where 1 was next

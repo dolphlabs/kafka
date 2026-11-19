@@ -177,6 +177,7 @@ pub fn after_ms(ms: int) -> until {
 
 gc struct Call {
     key: int,
+    version: int,
     corr: int,
     done: chan[bool],
     finished: bool,
@@ -201,6 +202,8 @@ pub gc struct Conn {
     head: int,
     corr: int,
     apis: map[int]ApiRange,
+    // the version sent for each API: ours, or the fallback (Redpanda)
+    vers: map[int]int,
     // bytes read past the last frame
     rb: bytes,
 }
@@ -246,7 +249,7 @@ pub gc struct Target {
 fn open_conn(cfg: Config, clock: Clock, node: int, host: str, port: int, deadline: until) -> result[Conn, str] {
     let c = Conn { cfg: cfg, clock: clock, node: node, host: host, port: port, fd: -1, ssl: nullptr, tls_ctx: nullptr,
                    closed: false, why: "", wlock: make_mutex(), plock: make_mutex(), pending: [], head: 0, corr: 0,
-                   apis: {}, rb: b"" };
+                   apis: {}, vers: {}, rb: b"" };
     if until_hit(deadline) {
         return err("kafka: dial " + host + ":" + to_str(port) + ": the deadline passed");
     }
@@ -293,6 +296,13 @@ fn handshake(c: Conn, deadline: until) -> result[bool, str] {
     }
     for a in v.apis {
         c.apis[a.key] = a;
+        let want = api_version(a.key);
+        let alt = fallback_version(a.key);
+        if want >= a.min && want <= a.max {
+            c.vers[a.key] = want;
+        } else if alt >= 0 && alt >= a.min && alt <= a.max {
+            c.vers[a.key] = alt;
+        }
     }
     // the calls every connection needs; the rest are checked when used
     for key in [API_METADATA, API_PRODUCE, API_FETCH] {
@@ -309,17 +319,31 @@ fn handshake(c: Conn, deadline: until) -> result[bool, str] {
 // An error when the broker does not support the version this client
 // sends for key.
 pub fn check_api(c: Conn, key: int) -> result[bool, str] {
+    if has(c.vers, key) {
+        return ok(true);
+    }
     let want = api_version(key);
     if !has(c.apis, key) {
         return err("kafka: broker " + label(c) + " does not support " + api_name(key));
     }
     let a = c.apis[key];
     if want < a.min || want > a.max {
-        return err("kafka: broker " + label(c) + " supports " + api_name(key) + " v" +
-                   to_str(a.min) + "-" + to_str(a.max) + "; this client sends v" + to_str(want) +
-                   " (Kafka 3.0 or later is needed)");
+        let sends = "v" + to_str(want);
+        if fallback_version(key) >= 0 {
+            sends = sends + " or v" + to_str(fallback_version(key));
+        }
+        return err("kafka: broker " + label(c) + " supports " + api_name(key) + " v" + to_str(a.min) + "-" +
+                   to_str(a.max) + "; this client sends " + sends + " (Kafka 3.0 or later is needed)");
     }
     return ok(true);
+}
+
+// The version of key this connection sends.
+pub fn conn_version(c: Conn, key: int) -> int {
+    if has(c.vers, key) {
+        return c.vers[key];
+    }
+    return api_version(key);
 }
 
 // A request and its response before the reader runs (the handshake).
@@ -450,13 +474,13 @@ pub fn call_timeout(c: Conn, key: int, body: Buf, deadline: until, timeout_ms: i
     guard let call = sr else let e = err_of(sr) { return err(e); }
     let fr = await_call(c, call, deadline, timeout_ms);
     guard let frame = fr else let e = err_of(fr) { return err(e); }
-    return response_reader(key, frame, call.corr);
+    return response_reader_v(key, call.version, frame, call.corr);
 }
 
 // Queues and writes a request. expect_reply false: no response comes
 // (a produce with acks=0).
 fn send_request(c: Conn, key: int, body: Buf, expect_reply: bool) -> result[Call, str] {
-    let call = Call { key: key, corr: 0, done: make_chan(1), finished: false, resp: b"", err: "" };
+    let call = Call { key: key, version: conn_version(c, key), corr: 0, done: make_chan(1), finished: false, resp: b"", err: "" };
     mutex_lock(c.wlock);
     if c.closed {
         mutex_unlock(c.wlock);
@@ -464,7 +488,7 @@ fn send_request(c: Conn, key: int, body: Buf, expect_reply: bool) -> result[Call
     }
     c.corr += 1;
     call.corr = c.corr;
-    let frame = frame_request(key, call.corr, c.cfg.client_id, body);
+    let frame = frame_request_v(key, call.version, call.corr, c.cfg.client_id, body);
     if expect_reply {
         mutex_lock(c.plock);
         push(c.pending, call);

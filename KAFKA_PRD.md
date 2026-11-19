@@ -305,8 +305,11 @@ Each milestone is a branch and a PR, merged in order.
    delivers batches and per-call overhead matters at Kafka rates.
 2. **Idempotent producer by default** (acks=all, as Java since 3.0):
    retries are safe by default; `idempotent = false` for acks 0/1.
-3. **One fixed API version per API** rather than a range: fewer code
-   paths, every one tested. The table above is the floor and ceiling.
+3. **One preferred API version per API**, plus one classic fallback for
+   the six APIs Redpanda serves only below it (Produce v7, Fetch v11,
+   ListOffsets v4, Metadata v8, InitProducerId v3, AddOffsetsToTxn v1),
+   negotiated per connection. Found by the live suite; every fallback is
+   tested byte for byte like the rest.
 4. **Codecs in slang**, not linked C libraries: no system dependencies,
    and no deep C code on an 8 KB task stack.
 5. **Eager group rebalancing in v1**, with cooperative and KIP-848 as

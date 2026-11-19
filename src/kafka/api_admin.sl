@@ -383,11 +383,17 @@ pub fn enc_add_partitions_to_txn(w: Buf, txn_id: str, producer_id: int, epoch: i
 }
 
 pub fn enc_add_offsets_to_txn(w: Buf, txn_id: str, producer_id: int, epoch: int, group: str) {
-    wr_cstr(w, txn_id);
+    enc_add_offsets_to_txn_v(w, 3, txn_id, producer_id, epoch, group);
+}
+
+// v1 (classic) or v3 (flexible).
+pub fn enc_add_offsets_to_txn_v(w: Buf, v: int, txn_id: str, producer_id: int, epoch: int, group: str) {
+    let flex = v >= 3;
+    wr_s(w, flex, txn_id);
     wr_i64(w, producer_id);
     wr_i16(w, epoch);
-    wr_cstr(w, group);
-    wr_tags(w);
+    wr_s(w, flex, group);
+    wr_t(w, flex);
 }
 
 pub fn enc_end_txn(w: Buf, txn_id: str, producer_id: int, epoch: int, commit: bool) {

@@ -285,11 +285,12 @@ fn do_refresh(cl: Client, deadline: until) -> result[bool, str] {
     while true {
         let cr = any_conn(cl, deadline);
         if let c = cr {
+            let v = conn_version(c, API_METADATA);
             let body = new_buf();
-            enc_metadata(body, some(names), false);
+            enc_metadata_v(body, v, some(names), false);
             let rr = call(c, API_METADATA, body, deadline);
             if let r = rr {
-                let mr = dec_metadata(r);
+                let mr = dec_metadata_v(r, v);
                 guard let m = mr else let e = err_of(mr) { return err(e); }
                 apply_metadata(cl, m, true);
                 return ok(true);
@@ -517,6 +518,13 @@ pub fn call_node_timeout(cl: Client, node: int, purpose: str, key: int, body: Bu
     let vr = check_api(c, key);
     guard let _v = vr else let e = err_of(vr) { return err(e); }
     return call_timeout(c, key, body, deadline, timeout_ms);
+}
+
+// A request over c, if the broker supports it.
+pub fn call_conn(c: Conn, key: int, body: Buf, deadline: until) -> result[Reader, str] {
+    let vr = check_api(c, key);
+    guard let _v = vr else let e = err_of(vr) { return err(e); }
+    return call(c, key, body, deadline);
 }
 
 // A request to any broker.

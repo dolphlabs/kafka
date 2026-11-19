@@ -107,19 +107,77 @@ pub fn api_name(key: int) -> str {
     };
 }
 
-// Every version this package sends is flexible but SaslHandshake v1.
+// The older version sent to a broker without api_version(key), for the
+// APIs Redpanda serves only in their classic forms (-1: none).
+pub fn fallback_version(key: int) -> int {
+    return switch key {
+        case 0 { 7 }
+        case 1 { 11 }
+        case 2 { 4 }
+        case 3 { 8 }
+        case 22 { 3 }
+        case 25 { 1 }
+        default { -1 }
+    };
+}
+
+// The first flexible version of each API this package sends.
+fn first_flexible(key: int) -> int {
+    return switch key {
+        case 0 { 9 }
+        case 1 { 12 }
+        case 2 { 6 }
+        case 3 { 9 }
+        case 8 { 8 }
+        case 9 { 6 }
+        case 10 { 3 }
+        case 11 { 6 }
+        case 12 { 4 }
+        case 13 { 4 }
+        case 14 { 4 }
+        case 15 { 5 }
+        case 16 { 3 }
+        case 18 { 3 }
+        case 19 { 5 }
+        case 20 { 4 }
+        case 21 { 2 }
+        case 22 { 2 }
+        case 24 { 3 }
+        case 25 { 3 }
+        case 26 { 3 }
+        case 28 { 3 }
+        case 32 { 4 }
+        case 36 { 2 }
+        case 37 { 2 }
+        case 42 { 2 }
+        case 44 { 1 }
+        default { 1000 }
+    };
+}
+
+// Whether key at version v uses compact lengths and tagged fields.
+pub fn flexible_at(key: int, v: int) -> bool {
+    return v >= first_flexible(key);
+}
+
+// Whether the version this package prefers for key is flexible (all but
+// SaslHandshake v1).
 pub fn api_flexible(key: int) -> bool {
-    return key != API_SASL_HANDSHAKE;
+    return flexible_at(key, api_version(key));
 }
 
 // The whole request, size first: header and body.
 pub fn frame_request(key: int, correlation: int, client_id: str, body: Buf) -> Buf {
+    return frame_request_v(key, api_version(key), correlation, client_id, body);
+}
+
+pub fn frame_request_v(key: int, version: int, correlation: int, client_id: str, body: Buf) -> Buf {
     let h = new_buf();
     wr_i16(h, key);
-    wr_i16(h, api_version(key));
+    wr_i16(h, version);
     wr_i32(h, correlation);
     wr_str(h, client_id);
-    if api_flexible(key) {
+    if flexible_at(key, version) {
         wr_tags(h);
     }
     let w = new_buf();
@@ -132,6 +190,10 @@ pub fn frame_request(key: int, correlation: int, client_id: str, body: Buf) -> B
 // A response body's reader: past the correlation id (checked against
 // want) and, for flexible responses, the header's tagged fields.
 pub fn response_reader(key: int, frame: bytes, want: int) -> result[Reader, str] {
+    return response_reader_v(key, api_version(key), frame, want);
+}
+
+pub fn response_reader_v(key: int, version: int, frame: bytes, want: int) -> result[Reader, str] {
     let r = reader(frame, 0, len(frame));
     let id = rd_i32(r);
     if !r.good() {
@@ -140,7 +202,7 @@ pub fn response_reader(key: int, frame: bytes, want: int) -> result[Reader, str]
     if id != want {
         return err("kafka: a response for request " + to_str(id) + " where " + to_str(want) + " was next");
     }
-    if api_flexible(key) && key != API_API_VERSIONS {
+    if flexible_at(key, version) && key != API_API_VERSIONS {
         rd_tags(r);
     }
     return ok(r);
@@ -159,4 +221,115 @@ fn strip_prefix(s: str) -> str {
         return strings.slice(s, 7, len(s));
     }
     return s;
+}
+
+// ---- fields in either form ------------------------------------------------------------
+//
+// The classic (flex false) or compact (flex true) form of a field, for
+// the APIs sent at a fallback version.
+
+pub fn wr_s(w: Buf, flex: bool, s: str) {
+    if flex {
+        wr_cstr(w, s);
+    } else {
+        wr_str(w, s);
+    }
+}
+
+pub fn wr_ns(w: Buf, flex: bool, s: opt[str]) {
+    if flex {
+        wr_cnstr(w, s);
+    } else {
+        wr_nstr(w, s);
+    }
+}
+
+pub fn wr_n(w: Buf, flex: bool, n: int) {
+    if flex {
+        wr_clen(w, n);
+    } else {
+        wr_len(w, n);
+    }
+}
+
+// A null array.
+pub fn wr_null_arr(w: Buf, flex: bool) {
+    if flex {
+        wr_uvarint(w, 0);
+    } else {
+        wr_i32(w, -1);
+    }
+}
+
+pub fn wr_t(w: Buf, flex: bool) {
+    if flex {
+        wr_tags(w);
+    }
+}
+
+pub fn rd_s(r: Reader, flex: bool) -> str {
+    if flex {
+        return rd_cstr(r);
+    }
+    return rd_str(r);
+}
+
+pub fn rd_ns(r: Reader, flex: bool) -> opt[str] {
+    if flex {
+        return rd_cnstr(r);
+    }
+    return rd_nstr(r);
+}
+
+pub fn rd_n(r: Reader, flex: bool) -> int {
+    if flex {
+        return rd_clen(r);
+    }
+    return rd_len(r);
+}
+
+// A nullable array's length: -1 for null.
+pub fn rd_nn(r: Reader, flex: bool) -> int {
+    if flex {
+        let n = rd_uvarint(r);
+        if n == 0 {
+            return -1;
+        }
+        if n - 1 > r.left() {
+            fail_read(r, "an array of " + to_str(n - 1) + " elements in " + to_str(r.left()) + " bytes");
+            return 0;
+        }
+        return n - 1;
+    }
+    let n = rd_i32(r);
+    if n < 0 {
+        return -1;
+    }
+    if n > r.left() {
+        fail_read(r, "an array of " + to_str(n) + " elements in " + to_str(r.left()) + " bytes");
+        return 0;
+    }
+    return n;
+}
+
+pub fn rd_t(r: Reader, flex: bool) {
+    if flex {
+        rd_tags(r);
+    }
+}
+
+pub fn rd_i32s(r: Reader, flex: bool) -> [int] {
+    let n = rd_n(r, flex);
+    let out: [int] = [];
+    for k in 0..n {
+        push(out, rd_i32(r));
+    }
+    return out;
+}
+
+pub fn wr_i32s(w: Buf, flex: bool, xs: [int]) {
+    wr_n(w, flex, len(xs));
+    for x in xs {
+        wr_i32(w, x);
+    }
 }

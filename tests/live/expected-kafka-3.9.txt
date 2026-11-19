@@ -1,0 +1,25 @@
+peer wrote 500 records
+connected: 1 broker, cluster id set true
+2000 keyed records (lz4): ok
+read back 2000, in order true, murmur2 placement true
+gzip: 300 through the broker intact true
+snappy: 300 through the broker intact true
+lz4: 300 through the broker intact true
+zstd: 300 through the broker intact true
+900 KB record: true
+2 MB record refused as too large: true
+900 KB record read back intact: true
+group of two: both assigned true
+group of two shared 600 of 600, duplicates 0
+commit round 0: ok
+abort round 1: ok
+commit round 2: ok
+read_committed: 20 records, aborted round visible false
+read_uncommitted: 30 records
+from franz-go: 500 records (zstd), headers true, placement matches key_partition true, in order true
+500 records for franz-go: ok
+scram-sha-512: produced true
+wrong password refused: true
+3000 records across a broker restart: ok
+after the restart: 3000 records, 3000 distinct, in order true
+peer read 500 records: values true, headers true, keyed placement matches murmur2 true

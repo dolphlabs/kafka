@@ -208,6 +208,92 @@ fn requests() {
     let body = kafka.new_buf();
     kafka.enc_api_versions(body, "slang-kafka", "0.1.0");
     check_req("frame_api_versions", kafka.frame_request(kafka.API_API_VERSIONS, 7, "client", body));
+
+    // the classic versions sent to Redpanda
+    w = kafka.new_buf();
+    kafka.enc_metadata_v(w, 8, some(["a", "bb"]), false);
+    check_req("metadata_v8", w);
+    let rb3 = kafka.new_buf();
+    kafka.wr_raw(rb3, to_bytes("batch"));
+    w = kafka.new_buf();
+    kafka.enc_produce_v(w, 7, some("tx"), -1, 30000,
+                        [kafka.ProduceTopic { topic: "t1", parts: [kafka.ProducePart { partition: 3, records: rb3 }] }]);
+    check_req("produce_v7", w);
+    w = kafka.new_buf();
+    kafka.enc_fetch_v(w, 11, kafka.FetchReq { max_wait_ms: 500, min_bytes: 1, max_bytes: 1000,
+                                              isolation: kafka.READ_UNCOMMITTED, session_id: 0, session_epoch: -1,
+                                              topics: [kafka.FetchTopic { topic: "t1",
+                                                                          parts: [kafka.FetchPart { partition: 2,
+                                                                                                    leader_epoch: -1,
+                                                                                                    offset: 77,
+                                                                                                    last_fetched_epoch: -1,
+                                                                                                    max_bytes: 4096 }] }],
+                                              forgotten: [], rack: "r" });
+    check_req("fetch_v11", w);
+    w = kafka.new_buf();
+    kafka.enc_list_offsets_v(w, 4, kafka.READ_UNCOMMITTED,
+                             [kafka.OffsetQuery { topic: "t1", partition: 0, leader_epoch: -1, timestamp: -2 }]);
+    check_req("list_offsets_v4", w);
+    w = kafka.new_buf();
+    kafka.enc_add_offsets_to_txn_v(w, 1, "tx", 5, 2, "g");
+    check_req("add_offsets_to_txn_v1", w);
+}
+
+fn fallback_responses() {
+    let mr = kafka.dec_metadata_v(rdr("metadata_v8"), 8);
+    if let m = mr {
+        line("cluster=" + ns(m.cluster_id) + " controller=" + to_str(m.controller));
+        for b in m.brokers {
+            line("broker " + to_str(b.node_id) + " " + b.host + ":" + to_str(b.port) + " rack=" + ns(b.rack));
+        }
+        for t in m.topics {
+            line("topic " + t.name + " error=" + to_str(t.error_code) + " internal=" + to_str(t.internal));
+            for p in t.partitions {
+                line("  part " + to_str(p.partition) + " error=" + to_str(p.error_code) + " leader=" + to_str(p.leader) +
+                     " epoch=" + to_str(p.leader_epoch) + " replicas=" + ints(p.replicas) + " isr=" + ints(p.isr) +
+                     " offline=" + ints(p.offline));
+            }
+        }
+    } else let e = err_of(mr) {
+        fail(e);
+    }
+    let pr = kafka.dec_produce_v(rdr("produce_v7"), 7);
+    if let p = pr {
+        line("throttle=" + to_str(p.throttle_ms));
+        for x in p.parts {
+            line("part " + x.topic + "/" + to_str(x.partition) + " error=" + to_str(x.error_code) + " base=" +
+                 to_str(x.base_offset) + " lat=" + to_str(x.log_append_time) + " lso=" + to_str(x.log_start_offset) +
+                 " msg=" + x.error_message);
+        }
+    } else let e = err_of(pr) {
+        fail(e);
+    }
+    let fr = kafka.dec_fetch_v(rdr("fetch_v11"), 11);
+    if let f = fr {
+        line("error=" + to_str(f.error_code) + " session=" + to_str(f.session_id));
+        for p in f.parts {
+            let ab = "null";
+            if let list = p.aborted {
+                let xs: [str] = [];
+                for a in list {
+                    push(xs, to_str(a.producer_id) + "@" + to_str(a.first_offset));
+                }
+                ab = "[" + strings.join(xs, " ") + "]";
+            }
+            line("part " + p.topic + "/" + to_str(p.partition) + " error=" + to_str(p.error_code) + " hw=" +
+                 to_str(p.high_watermark) + " lso=" + to_str(p.last_stable_offset) + " start=" +
+                 to_str(p.log_start_offset) + " aborted=" + ab + " preferred=" + to_str(p.preferred_replica) +
+                 " records=" + to_str(f.frame[p.records_from..p.records_to]));
+        }
+    } else let e = err_of(fr) {
+        fail(e);
+    }
+    let lr = kafka.dec_list_offsets_v(rdr("list_offsets_v4"), 4);
+    for o in lr ?? [] {
+        line("offset " + o.topic + "/" + to_str(o.partition) + " error=" + to_str(o.error_code) + " ts=" +
+             to_str(o.timestamp) + " offset=" + to_str(o.offset) + " epoch=" + to_str(o.leader_epoch));
+    }
+    line("error=" + to_str(kafka.dec_error_only_v(rdr("add_offsets_to_txn_v1"), "AddOffsetsToTxn", false) ?? -999));
 }
 
 fn named(name: str) {
@@ -434,6 +520,21 @@ fn why[T](r: result[T, str]) -> str {
 
 // the decoder for a vector's response, as an error ("" when it decoded)
 fn decode_any(name: str, r: kafka.Reader) -> str {
+    if name == "metadata_v8" {
+        return why(kafka.dec_metadata_v(r, 8));
+    }
+    if name == "produce_v7" {
+        return why(kafka.dec_produce_v(r, 7));
+    }
+    if name == "fetch_v11" {
+        return why(kafka.dec_fetch_v(r, 11));
+    }
+    if name == "list_offsets_v4" {
+        return why(kafka.dec_list_offsets_v(r, 4));
+    }
+    if name == "add_offsets_to_txn_v1" {
+        return why(kafka.dec_error_only_v(r, name, false));
+    }
     if strings.has_prefix(name, "api_versions") {
         return why(kafka.dec_api_versions(r));
     }
@@ -466,6 +567,7 @@ fn decode_any(name: str, r: kafka.Reader) -> str {
 
 requests();
 responses();
+fallback_responses();
 // every response cut short (by one byte, and in half) is an error
 let cut = 0;
 let refused = 0;

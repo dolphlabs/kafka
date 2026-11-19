@@ -105,6 +105,23 @@ first (PRODUCER_FENCED, its records never visible), 20 records consumed,
 transformed and produced with the group's offsets committed in the same
 transactions, and misuse.
 
+    make live SLANGC=/path/to/slangc
+
+runs `tests/live` against Apache Kafka 4.1 and 3.9 (KRaft) and Redpanda
+25.2 in Docker (needs docker and go): 2000 keyed records in order and on
+murmur2's partitions, every codec through the broker, a 900 KB record and
+a 2 MB one refused, a group of two sharing 600 records, committed and
+aborted transactions under `read_committed`, 500 records each way with
+franz-go (`tests/live/peer`: same partitions, headers and values), SCRAM
+with right and wrong passwords (Kafka), and the broker restarted while the
+producer is mid-stream: 3000 records, each exactly once, in order.
+
+Redpanda serves Produce, Fetch, ListOffsets, Metadata, InitProducerId and
+AddOffsetsToTxn only below the versions this client prefers; each
+connection negotiates the classic fallback for those (Produce v7, Fetch
+v11, ListOffsets v4, Metadata v8, InitProducerId v3, AddOffsetsToTxn v1),
+also checked byte for byte in `tests/protocol`.
+
     make interop SLANGC=/path/to/slangc
 
 decompresses the slang encoders' output with the same Go libraries (needs
