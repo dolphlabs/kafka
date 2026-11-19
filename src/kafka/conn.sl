@@ -440,9 +440,15 @@ fn read_error(c: Conn, e: str) -> str {
 // Sends a request and waits for its response, until deadline (and at
 // most the configured request timeout).
 pub fn call(c: Conn, key: int, body: Buf, deadline: until) -> result[Reader, str] {
+    return call_timeout(c, key, body, deadline, c.cfg.request_timeout_ms);
+}
+
+// call, with a request timeout of timeout_ms instead of the config's (a
+// JoinGroup may wait for the whole rebalance).
+pub fn call_timeout(c: Conn, key: int, body: Buf, deadline: until, timeout_ms: int) -> result[Reader, str] {
     let sr = send_request(c, key, body, true);
     guard let call = sr else let e = err_of(sr) { return err(e); }
-    let fr = await_call(c, call, deadline);
+    let fr = await_call(c, call, deadline, timeout_ms);
     guard let frame = fr else let e = err_of(fr) { return err(e); }
     return response_reader(key, frame, call.corr);
 }
@@ -473,10 +479,10 @@ fn send_request(c: Conn, key: int, body: Buf, expect_reply: bool) -> result[Call
     return ok(call);
 }
 
-fn await_call(c: Conn, call: Call, deadline: until) -> result[bytes, str] {
+fn await_call(c: Conn, call: Call, deadline: until, timeout_ms: int) -> result[bytes, str] {
     let capped = false;
     if !call.finished {
-        let w = add_waiter(c.clock, deadline, after_ms(c.cfg.request_timeout_ms));
+        let w = add_waiter(c.clock, deadline, after_ms(timeout_ms));
         select {
             case let _d = chan_recv(call.done) { }
             case let _t = chan_recv(w.wake) { }

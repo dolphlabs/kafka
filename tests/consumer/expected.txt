@@ -1,0 +1,18 @@
+assign: 300 records, in order true, at most 50 a poll
+seek p0 to 10: first offset 10; paused p1 records 0
+resumed p1 delivered records: true
+out of range at 5 after deleting below 50: restarted at 50
+poll after close: kafka: the consumer is closed
+reset latest: 0 old, then 5 new from offset 20
+reset none: kafka: c-reset/0 has no committed offset and reset is None
+group of one: 200 records, in order true, partitions 2, generation set true
+commit: ok
+close: ok
+committed offsets sum to 200
+resumed from the commit: 10 records, lowest value 200
+two members split six partitions: true (3+3)
+describe g-two: Stable, 2 members, protocol roundrobin
+shared: 600 distinct of 600, duplicates 0
+after b left, a has 6 partitions
+a then read 60 of the 60 new records
+static member rejoined with all 4 partitions, member ids differ true
