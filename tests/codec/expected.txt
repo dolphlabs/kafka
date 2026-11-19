@@ -1,0 +1,138 @@
+empty/gzip 0 e3b0c44298fc1c14
+empty/snappy-raw 0 e3b0c44298fc1c14
+empty/snappy-xerial 0 e3b0c44298fc1c14
+empty/lz4-default 0 e3b0c44298fc1c14
+empty/lz4-64k-nochecksum 0 e3b0c44298fc1c14
+empty/lz4-blockchecksum-size 0 e3b0c44298fc1c14
+empty/lz4-hc 0 e3b0c44298fc1c14
+empty/lz4-4m 0 e3b0c44298fc1c14
+empty/zstd-fastest 0 e3b0c44298fc1c14
+empty/zstd-default-crc 0 e3b0c44298fc1c14
+empty/zstd-better 0 e3b0c44298fc1c14
+empty/zstd-best 0 e3b0c44298fc1c14
+empty/zstd-stream-window 0 e3b0c44298fc1c14
+one/gzip 1 2d711642b726b044
+one/snappy-raw 1 2d711642b726b044
+one/snappy-xerial 1 2d711642b726b044
+one/lz4-default 1 2d711642b726b044
+one/lz4-64k-nochecksum 1 2d711642b726b044
+one/lz4-blockchecksum-size 1 2d711642b726b044
+one/lz4-hc 1 2d711642b726b044
+one/lz4-4m 1 2d711642b726b044
+one/zstd-fastest 1 2d711642b726b044
+one/zstd-default-crc 1 2d711642b726b044
+one/zstd-better 1 2d711642b726b044
+one/zstd-best 1 2d711642b726b044
+one/zstd-stream-window 1 2d711642b726b044
+short/gzip 31 c36e5a8c8b4b4feb
+short/snappy-raw 31 c36e5a8c8b4b4feb
+short/snappy-xerial 31 c36e5a8c8b4b4feb
+short/lz4-default 31 c36e5a8c8b4b4feb
+short/lz4-64k-nochecksum 31 c36e5a8c8b4b4feb
+short/lz4-blockchecksum-size 31 c36e5a8c8b4b4feb
+short/lz4-hc 31 c36e5a8c8b4b4feb
+short/lz4-4m 31 c36e5a8c8b4b4feb
+short/zstd-fastest 31 c36e5a8c8b4b4feb
+short/zstd-default-crc 31 c36e5a8c8b4b4feb
+short/zstd-better 31 c36e5a8c8b4b4feb
+short/zstd-best 31 c36e5a8c8b4b4feb
+short/zstd-stream-window 31 c36e5a8c8b4b4feb
+zeros/gzip 300000 886715e4051e827f
+zeros/snappy-raw 300000 886715e4051e827f
+zeros/snappy-xerial 300000 886715e4051e827f
+zeros/lz4-default 300000 886715e4051e827f
+zeros/lz4-64k-nochecksum 300000 886715e4051e827f
+zeros/lz4-blockchecksum-size 300000 886715e4051e827f
+zeros/lz4-hc 300000 886715e4051e827f
+zeros/lz4-4m 300000 886715e4051e827f
+zeros/zstd-fastest 300000 886715e4051e827f
+zeros/zstd-default-crc 300000 886715e4051e827f
+zeros/zstd-better 300000 886715e4051e827f
+zeros/zstd-best 300000 886715e4051e827f
+zeros/zstd-stream-window 300000 886715e4051e827f
+random/gzip 20000 29309b0cc29401c3
+random/snappy-raw 20000 29309b0cc29401c3
+random/snappy-xerial 20000 29309b0cc29401c3
+random/lz4-default 20000 29309b0cc29401c3
+random/lz4-64k-nochecksum 20000 29309b0cc29401c3
+random/lz4-blockchecksum-size 20000 29309b0cc29401c3
+random/lz4-hc 20000 29309b0cc29401c3
+random/lz4-4m 20000 29309b0cc29401c3
+random/zstd-fastest 20000 29309b0cc29401c3
+random/zstd-default-crc 20000 29309b0cc29401c3
+random/zstd-better 20000 29309b0cc29401c3
+random/zstd-best 20000 29309b0cc29401c3
+random/zstd-stream-window 20000 29309b0cc29401c3
+json/gzip 150023 de6dec3bc3a19bc2
+json/snappy-raw 150023 de6dec3bc3a19bc2
+json/snappy-xerial 150023 de6dec3bc3a19bc2
+json/lz4-default 150023 de6dec3bc3a19bc2
+json/lz4-64k-nochecksum 150023 de6dec3bc3a19bc2
+json/lz4-blockchecksum-size 150023 de6dec3bc3a19bc2
+json/lz4-hc 150023 de6dec3bc3a19bc2
+json/lz4-4m 150023 de6dec3bc3a19bc2
+json/zstd-fastest 150023 de6dec3bc3a19bc2
+json/zstd-default-crc 150023 de6dec3bc3a19bc2
+json/zstd-better 150023 de6dec3bc3a19bc2
+json/zstd-best 150023 de6dec3bc3a19bc2
+json/zstd-stream-window 150023 de6dec3bc3a19bc2
+text/gzip 200000 92ca5641f0c281b2
+text/snappy-raw 200000 92ca5641f0c281b2
+text/snappy-xerial 200000 92ca5641f0c281b2
+text/lz4-default 200000 92ca5641f0c281b2
+text/lz4-64k-nochecksum 200000 92ca5641f0c281b2
+text/lz4-blockchecksum-size 200000 92ca5641f0c281b2
+text/lz4-hc 200000 92ca5641f0c281b2
+text/lz4-4m 200000 92ca5641f0c281b2
+text/zstd-fastest 200000 92ca5641f0c281b2
+text/zstd-default-crc 200000 92ca5641f0c281b2
+text/zstd-better 200000 92ca5641f0c281b2
+text/zstd-best 200000 92ca5641f0c281b2
+text/zstd-stream-window 200000 92ca5641f0c281b2
+mixed/gzip 60046 af91e8805a50fd94
+mixed/snappy-raw 60046 af91e8805a50fd94
+mixed/snappy-xerial 60046 af91e8805a50fd94
+mixed/lz4-default 60046 af91e8805a50fd94
+mixed/lz4-64k-nochecksum 60046 af91e8805a50fd94
+mixed/lz4-blockchecksum-size 60046 af91e8805a50fd94
+mixed/lz4-hc 60046 af91e8805a50fd94
+mixed/lz4-4m 60046 af91e8805a50fd94
+mixed/zstd-fastest 60046 af91e8805a50fd94
+mixed/zstd-default-crc 60046 af91e8805a50fd94
+mixed/zstd-better 60046 af91e8805a50fd94
+mixed/zstd-best 60046 af91e8805a50fd94
+mixed/zstd-stream-window 60046 af91e8805a50fd94
+roundtrip empty gzip ok
+roundtrip empty snappy ok
+roundtrip empty lz4 ok
+roundtrip empty zstd ok
+roundtrip one gzip ok
+roundtrip one snappy ok
+roundtrip one lz4 ok
+roundtrip one zstd ok
+roundtrip short gzip ok
+roundtrip short snappy ok
+roundtrip short lz4 ok
+roundtrip short zstd ok
+roundtrip zeros gzip ok
+roundtrip zeros snappy ok
+roundtrip zeros lz4 ok
+roundtrip zeros zstd ok
+roundtrip random gzip ok
+roundtrip random snappy ok
+roundtrip random lz4 ok
+roundtrip random zstd ok
+roundtrip json gzip ok
+roundtrip json snappy ok
+roundtrip json lz4 ok
+roundtrip json zstd ok
+roundtrip text gzip ok
+roundtrip text snappy ok
+roundtrip text lz4 ok
+roundtrip text zstd ok
+roundtrip mixed gzip ok
+roundtrip mixed snappy ok
+roundtrip mixed lz4 ok
+roundtrip mixed zstd ok
+hostile 624 mutations, no crash
+limits ok

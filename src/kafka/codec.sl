@@ -24,7 +24,16 @@ pub fn compress(codec: int, data: bytes) -> result[bytes, str] {
         guard let out = r else let e = err_of(r) { return err("kafka: gzip: " + e); }
         return ok(out);
     }
-    return err("kafka: " + codec_name(codec) + " compression is not supported");
+    if codec == CODEC_SNAPPY {
+        return ok(snappy_encode(data));
+    }
+    if codec == CODEC_LZ4 {
+        return ok(lz4_encode(data));
+    }
+    if codec == CODEC_ZSTD {
+        return ok(zstd_encode(data));
+    }
+    return err("kafka: compression codec " + to_str(codec) + " is unknown");
 }
 
 // data decompressed, refusing output past max bytes.
@@ -37,5 +46,14 @@ pub fn decompress(codec: int, data: bytes, max: int) -> result[bytes, str] {
         guard let out = r else let e = err_of(r) { return err("kafka: gzip: " + e); }
         return ok(out);
     }
-    return err("kafka: " + codec_name(codec) + " compression is not supported");
+    if codec == CODEC_SNAPPY {
+        return snappy_decode(data, max);
+    }
+    if codec == CODEC_LZ4 {
+        return lz4_decode(data, max);
+    }
+    if codec == CODEC_ZSTD {
+        return zstd_decode(data, max);
+    }
+    return err("kafka: compression codec " + to_str(codec) + " is unknown");
 }
