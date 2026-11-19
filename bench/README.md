@@ -11,35 +11,41 @@ v1.22 (`bench/go`), ABBA (slang, go, go, slang) so drift hits both:
   the consumer receiving it.
 
 Each run is timed by `/usr/bin/time -l` for CPU (user + sys) and peak
-RSS. Raw output: `results-2026-11-19.txt` (macOS, x86-64, the broker in
-Docker Desktop on the same machine).
+RSS. Raw output: `results-2026-11-19-copy-into.txt` (this table; slang
+with dolphlabs/slang#548) and `results-2026-11-19.txt` (before it), both
+macOS x86-64 with the broker in Docker Desktop on the same machine.
 
 ## Results (mean of the two runs each)
 
 | workload | slang | franz-go | slang / go |
 |---|---|---|---|
-| produce, none | 301k rec/s, 5.1 s CPU, 203 MB | 961k rec/s, 1.2 s CPU, 44 MB | 0.31x |
-| produce, lz4 | 320k rec/s, 5.3 s CPU, 198 MB | 2.20M rec/s, 0.8 s CPU, 68 MB | 0.15x |
-| produce, zstd | 249k rec/s, 6.7 s CPU, 257 MB | 2.28M rec/s, 0.9 s CPU, 60 MB | 0.11x |
-| consume, none | 562k rec/s, 1.5 s CPU, 175 MB | 1.95M rec/s, 0.4 s CPU, 40 MB | 0.29x |
-| consume, lz4 | 441k rec/s, 2.4 s CPU, 196 MB | 2.23M rec/s, 0.6 s CPU, 300 MB | 0.20x |
-| consume, zstd | 363k rec/s, 2.9 s CPU, 355 MB | 3.15M rec/s, 0.5 s CPU, 294 MB | 0.12x |
-| latency p50 / p99 | 1.37 / 2.21 ms, 5 MB | 1.38 / 2.79 ms, 13 MB | on par |
+| produce, none | 276k rec/s, 5.2 s CPU, 201 MB | 1.00M rec/s, 1.2 s CPU, 45 MB | 0.27x |
+| produce, lz4 | 253k rec/s, 6.4 s CPU, 205 MB | 1.92M rec/s, 1.0 s CPU, 65 MB | 0.13x |
+| produce, zstd | 252k rec/s, 6.8 s CPU, 224 MB | 1.48M rec/s, 1.3 s CPU, 65 MB | 0.17x |
+| consume, none | 642k rec/s, 1.4 s CPU, 157 MB | 2.16M rec/s, 0.4 s CPU, 37 MB | 0.30x |
+| consume, lz4 | 413k rec/s, 2.6 s CPU, 286 MB | 2.34M rec/s, 0.7 s CPU, 303 MB | 0.18x |
+| consume, zstd | 345k rec/s, 3.0 s CPU, 292 MB | 2.14M rec/s, 0.7 s CPU, 290 MB | 0.16x |
+| latency p50 / p99 | 1.53 / 3.03 ms, 5 MB | 1.62 / 2.59 ms, 13 MB | on par |
+
+The two slang runs of a row differ by up to 40% (this machine also runs
+the broker), so read the ratios to one significant figure.
 
 ## What the gaps are
 
 - **Latency is on par**, with a third of the memory.
-- **Throughput is 3x behind uncompressed and 6-8x behind compressed.**
-  Two causes are measured, not guessed:
-  1. Every byte copied or decompressed in slang goes through a loop that
-     pays a GC poll and two bounds checks per byte; the generated C shows
-     it (see the codec PR). franz-go's codecs and copies are native
-     (memmove, assembly lz4/zstd). A stdlib primitive that copies a range
-     into an existing `bytes` (`byteutil.copy_into`) would remove most of
-     this for the codecs, the record writer and the fetch path.
-  2. Per-record allocation: a `Record` and its value per send, a
-     `Message`, key and value copy per consumed record; franz-go reuses
-     buffers and slices fetch responses without copying.
+- **Throughput is 3x behind uncompressed and 5-8x behind compressed.**
+  The cause is allocation and the collector, not the codecs:
+  1. A profile of the zstd consume (`sample`) is mostly the collector
+     and allocator: page allocation, marking, the minor collections'
+     root set, zeroing and `madvise`. The zstd and record decoding
+     functions are a small share.
+  2. That work comes from allocating per record: a `Record` and its
+     value per send; a `Message`, key and value copy per consumed record.
+     franz-go reuses buffers and slices fetch responses without copying.
+  3. Not the cause: byte copies. Codecs and the buffer writer now copy
+     with `strings.copy_into` (one memmove, 14x a byte loop at 100 bytes,
+     over 100x at 4 KB), and throughput did not move beyond run-to-run
+     noise.
 - **RSS is 4-5x franz-go's on produce**: the 64 MiB producer buffer fills
   (send outruns the sender), and the collector paces at twice the live
   heap. A smaller `buffer_bytes` trades it for back-pressure.
@@ -51,15 +57,14 @@ Docker Desktop on the same machine).
   waited behind it on the same connection. The consumer now fetches a
   broker's partitions together, one fetch in flight per broker, once the
   last response is drained (as franz-go does): 14k -> 560k rec/s.
-- **Fixed in this package, open in slang: a stack overflow on large
-  allocations in deep tasks.** Consuming 1M zstd records died with "a task
-  overflowed its stack" (SIGBUS in the guard page) every time. The fault
-  is `___chkstk_darwin` called from libsystem_malloc: macOS's malloc takes
-  a path with a frame over 4 KB for large blocks, the slang runtime makes
-  such allocations from a task's stack, and a task is only promised 2 KB
-  below a slang call. Decompressing a fetch allocates megabytes deep in
-  the fetch task. The fetch and produce tasks now grow their stacks
-  first (`grow_stack` in consumer.sl): 0 crashes in 5 repeats and in
-  this whole run. The real fix belongs in the slang runtime: reserve
-  stack (as `sl_rt_need_stack` does for OpenSSL and SQLite) before a
-  large allocation.
+- **Fixed in slang: a stack overflow in deep tasks.** Consuming 1M zstd
+  records died with "a task overflowed its stack" (SIGBUS in the guard
+  page) every time. The crash report shows the path: the decoder pushes to
+  a list, the collector takes a fresh 16 KB page with `aligned_alloc`, and
+  libmalloc trims the slack through `free_small`, which can put a 4 KB
+  array on the stack (`small_free_scan_madvise_free`). A slang task is
+  only promised 2 KB below a call. Collections started at a safepoint ran
+  into the same `free()` path. slang now runs the collector, and its page
+  and large-object allocations, on the worker's own stack
+  (dolphlabs/slang#548), and this package's `grow_stack` workaround is
+  gone.
