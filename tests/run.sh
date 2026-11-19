@@ -2,7 +2,8 @@
 # The deterministic suite: the package's unit tests, then the vectors in
 # tests/wire (written by franz-go through tests/wire/gen) and tests/codec
 # (written by klauspost/compress, pierrec/lz4, golang/snappy and gzip
-# through tests/codec/gen).
+# through tests/codec/gen), and tests/protocol (every request and response
+# against franz-go's kmsg, through tests/protocol/gen).
 set -eu
 
 repo=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
@@ -11,8 +12,8 @@ run_dir=$(mktemp -d "${TMPDIR:-/tmp}/kafka-test.XXXXXX")
 trap 'rm -rf "$run_dir"' EXIT HUP INT TERM
 
 (cd "$repo" && "$slangc" test src/kafka)
-for t in wire codec; do
-    actual=$(cd "$run_dir" && KAFKA_TESTDATA="$repo/tests/$t" "$slangc" "$repo/tests/$t/main.sl" --run 2>&1)
+for t in wire codec protocol; do
+    actual=$(cd "$run_dir" && KAFKA_TESTDATA="$repo/tests/$t" "$slangc" "$repo/tests/$t/main.sl" --run 2>&1) || true
     expected=$(cat "$repo/tests/$t/expected.txt")
     if [ "$actual" != "$expected" ]; then
         printf '%s\n' "kafka tests ($t): output mismatch" >&2
