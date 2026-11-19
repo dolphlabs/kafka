@@ -928,13 +928,8 @@ fn zstd_sequences(st: ZState, src: bytes, pos: int, to: int, nseq: int, lits: by
             return err("kafka: zstd: a match from before the start");
         }
         out_room(o, ml);
-        let d = o.n;
-        let s = d - off;
-        let b = o.b;
-        for i in 0..ml {
-            b[d + i] = b[s + i];
-        }
-        o.n = d + ml;
+        // forward, so a match that overlaps itself repeats (LZ77)
+        o.n = strings.copy_into(o.b, o.n, o.b, o.n - off, o.n - off + ml);
     }
     if r.pos != 0 {
         return err("kafka: zstd: a sequence bitstream with bits left over");
