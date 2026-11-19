@@ -41,6 +41,7 @@ pub gc struct Client {
     meta_lock: mutex,
     meta_stale: bool,
     coords: map[str]int,
+    uids: int,
     closed: bool,
 }
 
@@ -61,7 +62,7 @@ pub fn connect(cfg: Config, deadline: until) -> result[Client, str] {
     }
     let cl = Client { cfg: cfg, crc: crc_tables(), clock: new_clock(), lock: make_mutex(), seeds: seeds, brokers: {},
                       conns: {}, topics: {}, interest: {}, cluster_id: "", controller: -1, meta_ns: 0,
-                      meta_lock: make_mutex(), meta_stale: false, coords: {}, closed: false };
+                      meta_lock: make_mutex(), meta_stale: false, coords: {}, uids: 0, closed: false };
     let rr = refresh_metadata(cl, deadline);
     guard let _r = rr else let e = err_of(rr) {
         close(cl);
@@ -170,6 +171,27 @@ pub fn conn_to(cl: Client, node: int, purpose: str, deadline: until) -> result[C
     cl.conns[key] = c;
     mutex_unlock(cl.lock);
     return ok(c);
+}
+
+// Closes every connection for purpose (a closed consumer's).
+fn close_purpose(cl: Client, purpose: str) {
+    let suffix = "/" + purpose;
+    let gone: [Conn] = [];
+    mutex_lock(cl.lock);
+    let keys: [str] = [];
+    for k, c in cl.conns {
+        if strings_suffix(k, suffix) {
+            push(keys, k);
+            push(gone, c);
+        }
+    }
+    for k in keys {
+        del(cl.conns, k);
+    }
+    mutex_unlock(cl.lock);
+    for c in gone {
+        close_conn(c);
+    }
 }
 
 // A control connection to any broker: an open one if there is one, else
@@ -486,6 +508,15 @@ pub fn call_node(cl: Client, node: int, purpose: str, key: int, body: Buf, deadl
     let vr = check_api(c, key);
     guard let _v = vr else let e = err_of(vr) { return err(e); }
     return call(c, key, body, deadline);
+}
+
+pub fn call_node_timeout(cl: Client, node: int, purpose: str, key: int, body: Buf, deadline: until, timeout_ms: int)
+                         -> result[Reader, str] {
+    let cr = conn_to(cl, node, purpose, deadline);
+    guard let c = cr else let e = err_of(cr) { return err(e); }
+    let vr = check_api(c, key);
+    guard let _v = vr else let e = err_of(vr) { return err(e); }
+    return call_timeout(c, key, body, deadline, timeout_ms);
 }
 
 // A request to any broker.

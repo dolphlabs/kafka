@@ -12,7 +12,10 @@ connection and cluster layers: TLS, SASL (PLAIN, SCRAM-SHA-256/512,
 OAUTHBEARER), API version checks, pipelined requests with deadlines,
 bootstrap and metadata, and the admin calls; and the producer (batching
 per partition, murmur2 and sticky partitioning, every codec, acks 0/1/all,
-idempotence with retries that never duplicate or reorder).
+idempotence with retries that never duplicate or reorder); and the
+consumer (assigned partitions or consumer groups with range, round-robin
+and sticky assignment, static membership, automatic and manual commits,
+seek, pause and resume, every reset policy, `read_committed`).
 
 Needs slang built from `dev` at 7a5bfe1 or later (SCRAM-SHA-512 uses
 `crypto.hmac_sha512`, which the 0.2.5 release lacks).
@@ -36,6 +39,17 @@ let sr = kafka.send(p, rec);                                 // result[Pending, 
 guard let pend = sr else let e = err_of(sr) { panic(e); }    // e.g. the buffer is full
 let dr = kafka.wait(p, pend, deadline);                      // result[Produced, str]: partition, offset
 kafka.close_producer(p, deadline);                           // flushes first
+
+let co = kafka.consumer_options("billing");
+co.reset = kafka.Reset.Earliest;
+let cr = kafka.subscribe(cl, ["orders"], co, deadline);     // result[Consumer, str]
+guard let c = cr else let e = err_of(cr) { panic(e); }
+while !proc.shutdown_requested() {
+    let mr = kafka.poll(c, kafka.after_ms(1000));            // result[[Message], str]; [] at the deadline
+    guard let msgs = mr else let e = err_of(mr) { panic(e); }
+    for m in msgs { handle(m.key, m.value); }
+}
+kafka.close_consumer(c, deadline);                           // commits, leaves the group
 kafka.close(cl);
 ```
 
@@ -77,6 +91,11 @@ codecs through the broker, acks 0/1/all, three injected
 NOT_LEADER_OR_FOLLOWER answers, two dropped connections and a leader move
 (no duplicates, order kept), MESSAGE_TOO_LARGE, the buffer limit, unknown
 topics and partitions. tests/kfake's control port injects the faults.
+`tests/consumer` (needs go): 300 records in order across assigned
+partitions, seek, pause and resume, a position deleted from under the
+consumer, every reset policy, a group that commits and resumes exactly
+there, two members splitting six partitions and sharing 600 records with
+no loss or duplicates, a member leaving, and a static member rejoining.
 
     make interop SLANGC=/path/to/slangc
 
