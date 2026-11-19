@@ -10,7 +10,9 @@ CRC-32C, record batches v2 and message sets v0/v1), the four codecs
 request and response codecs for the 28 APIs the client uses, and the
 connection and cluster layers: TLS, SASL (PLAIN, SCRAM-SHA-256/512,
 OAUTHBEARER), API version checks, pipelined requests with deadlines,
-bootstrap and metadata, and the admin calls.
+bootstrap and metadata, and the admin calls; and the producer (batching
+per partition, murmur2 and sticky partitioning, every codec, acks 0/1/all,
+idempotence with retries that never duplicate or reorder).
 
 Needs slang built from `dev` at 7a5bfe1 or later (SCRAM-SHA-512 uses
 `crypto.hmac_sha512`, which the 0.2.5 release lacks).
@@ -25,6 +27,15 @@ let clr = kafka.connect(cfg, kafka.after_ms(10000));
 guard let cl = clr else let e = err_of(clr) { panic(e); }
 kafka.create_topic(cl, "orders", 12, 3, deadline);         // result[bool, str]: false if it existed
 let end = kafka.list_offset(cl, "orders", 0, kafka.OFFSET_LATEST, deadline);
+
+let pr = kafka.producer(cl, kafka.producer_options());     // idempotent, acks=all, 5 ms linger
+guard let p = pr else let e = err_of(pr) { panic(e); }
+let rec = kafka.record("orders", to_bytes(order_id), body);
+kafka.add_header(rec, "content-type", to_bytes("application/json"));
+let sr = kafka.send(p, rec);                                 // result[Pending, str], at once
+guard let pend = sr else let e = err_of(sr) { panic(e); }    // e.g. the buffer is full
+let dr = kafka.wait(p, pend, deadline);                      // result[Produced, str]: partition, offset
+kafka.close_producer(p, deadline);                           // flushes first
 kafka.close(cl);
 ```
 
@@ -59,7 +70,13 @@ mid-response, metadata never answered, and malformed metadata.
 franz-go's `kfake` (`tests/kfake`): metadata, topic creation and deletion,
 partitions, offsets, configs and groups; every SASL mechanism with right
 and wrong credentials; TLS against a private CA, and refused without it;
-and seed fallback.
+and seed fallback. `tests/producer` (needs go) produces against kfake and
+reads every record back: keyed placement and per-partition order across
+1000 records, sticky spreading, tombstones and null headers, all four
+codecs through the broker, acks 0/1/all, three injected
+NOT_LEADER_OR_FOLLOWER answers, two dropped connections and a leader move
+(no duplicates, order kept), MESSAGE_TOO_LARGE, the buffer limit, unknown
+topics and partitions. tests/kfake's control port injects the faults.
 
     make interop SLANGC=/path/to/slangc
 

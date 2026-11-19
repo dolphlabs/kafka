@@ -1,0 +1,28 @@
+idempotent producer id assigned: true
+flush: ok
+keyed: 1000 acknowledged, wrong partition 0, offsets out of order 0, total 1000
+keyed: read back 1000, out of place 0
+sticky: every partition used true, total 300
+tombstone: offset matches true, key empty true, value null true, header null true, timestamp 1234
+codec-gzip flush: ok
+codec-gzip: 500 read back intact true
+codec-snappy flush: ok
+codec-snappy: 500 read back intact true
+codec-lz4 flush: ok
+codec-lz4: 500 read back intact true
+codec-zstd flush: ok
+codec-zstd: 500 read back intact true
+acks=1: offset known true, producer id -1
+acks=0: offset known false, producer id -1
+idempotent acks=1: kafka: an idempotent producer needs acks=-1 (all); set idempotent = false for acks 0 or 1
+after 3 NOT_LEADER_OR_FOLLOWER: ok
+after 2 dropped connections: ok
+after a leader move: ok
+leader moved to the target: true
+MESSAGE_TOO_LARGE: kafka: produce to faults/0: MESSAGE_TOO_LARGE (10)
+faults: 61 records, duplicates 0, in order true
+buffer: kafka: the producer's buffer is full (2048 bytes): records are produced more slowly than they are sent
+buffer drained: 0
+unknown topic: kafka: produce to no-such-topic: UNKNOWN_TOPIC_OR_PARTITION (3)
+no partition 5: kafka: topic limits has no partition 5
+send after close: kafka: the producer is closed
